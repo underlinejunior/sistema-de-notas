@@ -590,3 +590,61 @@ input[readonly] {
   color: var(--cor-texto-suave);
   cursor: not-allowed;
 }
+
+
+/* Campos de senha com botão de visualização */
+.campo-senha {
+  position: relative;
+  width: 100%;
+}
+
+.campo-senha input {
+  padding-right: 52px;
+}
+
+.botao-olho {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+  width: 38px;
+  height: 38px;
+  border: 0;
+  border-radius: 10px;
+  background: #eef2ff;
+  color: var(--cor-primaria);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+}
+
+.botao-olho:hover,
+.botao-olho:focus {
+  background: #dbeafe;
+  outline: none;
+}
+
+.botao-link {
+  border: 0;
+  background: transparent;
+  color: var(--cor-primaria);
+  font-weight: 700;
+  cursor: pointer;
+  padding: 8px 4px 0;
+  text-align: center;
+}
+
+.botao-link:hover,
+.botao-link:focus {
+  color: var(--cor-primaria-escura);
+  text-decoration: underline;
+  outline: none;
+}
+
+.alerta-sucesso {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+  color: var(--cor-sucesso);
+}

@@ -623,7 +623,10 @@ async function renderUsuarios() {
         ${usuarioEdicao ? "" : `
           <div>
             <label>Senha inicial</label>
-            <input name="senha" type="password" minlength="6" required placeholder="Mínimo 6 caracteres" />
+            <div class="campo-senha">
+              <input id="senha-inicial-usuario" name="senha" type="password" minlength="6" required placeholder="Mínimo 6 caracteres" />
+              <button class="botao-olho" type="button" data-alternar-senha="senha-inicial-usuario" aria-label="Mostrar senha" title="Mostrar senha">👁</button>
+            </div>
           </div>
         `}
         <div>
@@ -670,6 +673,10 @@ async function renderUsuarios() {
 
   $("#tipo-usuario").addEventListener("change", atualizarCampoCurso);
   atualizarCampoCurso();
+
+  $$('[data-alternar-senha]').forEach((botao) => {
+    botao.addEventListener("click", () => alternarVisibilidadeSenha(botao));
+  });
 
   if (usuarioEdicao) {
     $("#cancelar-edicao-usuario").addEventListener("click", () => limparEdicao("editarUsuarioId", renderUsuarios));

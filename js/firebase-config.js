@@ -2,12 +2,12 @@
 // Firebase Console > Configurações do projeto > Seus apps > App Web > SDK setup and configuration.
 
 export const firebaseConfig = {
-  apiKey: "COLE_SUA_API_KEY_AQUI",
-  authDomain: "SEU_PROJETO.firebaseapp.com",
-  projectId: "SEU_PROJETO",
-  storageBucket: "SEU_PROJETO.appspot.com",
-  messagingSenderId: "000000000000",
-  appId: "1:000000000000:web:0000000000000000000000"
+    apiKey: "AIzaSyCpUNnndVGm7Fb3PoqbxaE0Vr4j_93geuo",
+    authDomain: "notas-9a03b.firebaseapp.com",
+    projectId: "notas-9a03b",
+    storageBucket: "notas-9a03b.firebasestorage.app",
+    messagingSenderId: "408511622545",
+    appId: "1:408511622545:web:7cf22421ab38c1611b3e30"
 };
 
 // Deixe false para usar o Firebase normal.

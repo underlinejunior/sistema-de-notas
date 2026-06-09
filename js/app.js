@@ -263,6 +263,17 @@ async function renderDashboard() {
     const matriculas = await buscarTodos(COLECOES.matriculas);
     const frequencias = await buscarTodos(COLECOES.frequencias);
     cache.matriculas = matriculas;
+
+    const usuariosAtivos = cache.usuarios.filter((usuario) => usuario.ativo !== false);
+    const professores = usuariosAtivos.filter((usuario) => usuario.tipo === TIPOS_USUARIO.PROFESSOR).length;
+    const alunos = usuariosAtivos.filter((usuario) => usuario.tipo === TIPOS_USUARIO.ALUNO).length;
+    const ofertasAtivas = cache.ofertas.filter((oferta) => oferta.ativa !== false);
+    const aulasPendentes = cache.aulas.filter((aula) => aula.chamadaRealizada !== true).length;
+    const matriculasSemProfessor = matriculas.filter((matricula) => {
+      const oferta = cache.ofertas.find((item) => item.id === matricula.ofertaId);
+      return oferta?.professorId && matricula.professorId !== oferta.professorId;
+    });
+
     const alertasFrequencia = matriculas.filter((matricula) => {
       const oferta = cache.ofertas.find((item) => item.id === matricula.ofertaId);
       const aulasOferta = cache.aulas.filter((aula) => aula.ofertaId === matricula.ofertaId);
@@ -270,43 +281,131 @@ async function renderDashboard() {
       return calcularResumoFrequencia(matricula, oferta, aulasOferta, frequenciasOferta).alerta;
     });
 
-    definirTitulo("Painel do coordenador", "Visão geral do sistema acadêmico.");
+    definirTitulo("Painel do coordenador", "Resumo geral e próximos passos do sistema.");
     conteudo().innerHTML = `
-      <section class="grid-cards">
-        <div class="card"><strong>${cache.usuarios.length}</strong><span>Usuários cadastrados</span><p>Coordenadores, professores e alunos.</p></div>
-        <div class="card"><strong>${cache.cursos.length}</strong><span>Cursos</span><p>Cursos ativos ou cadastrados.</p></div>
-        <div class="card"><strong>${cache.disciplinas.length}</strong><span>Disciplinas</span><p>Base geral de disciplinas.</p></div>
-        <div class="card"><strong>${cache.ofertas.length}</strong><span>Ofertas</span><p>Disciplinas abertas por período.</p></div>
-        <div class="card"><strong>${matriculas.length}</strong><span>Matrículas</span><p>Alunos vinculados às ofertas.</p></div>
-        <div class="card"><strong>${cache.aulas.length}</strong><span>Aulas previstas</span><p>Dias e horas cadastrados para frequência.</p></div>
-        <div class="card"><strong>${alertasFrequencia.length}</strong><span>Alertas de frequência</span><p>Alunos abaixo do mínimo obrigatório.</p></div>
+      <section class="painel-guia">
+        <div>
+          <span class="rotulo-painel">Visão geral</span>
+          <h2>Olá, ${protegerTexto(perfilAtual.nome || "coordenador")}.</h2>
+          <p>Comece pelos cadastros básicos, depois crie as ofertas, matricule os alunos, configure os dias de aula e acompanhe notas e frequência.</p>
+        </div>
+        <div class="acoes">
+          <button class="botao botao-primario" data-ir="usuarios">Cadastrar usuários</button>
+          <button class="botao botao-secundario" data-ir="matriculas">Matricular alunos</button>
+          <button class="botao botao-secundario" data-ir="frequencia">Configurar frequência</button>
+        </div>
       </section>
+
+      <section class="grid-cards">
+        <div class="card card-destaque"><strong>${usuariosAtivos.length}</strong><span>Usuários ativos</span><p>${professores} professor(es) e ${alunos} aluno(s).</p></div>
+        <div class="card"><strong>${cache.cursos.length}</strong><span>Cursos</span><p>Cursos cadastrados no sistema.</p></div>
+        <div class="card"><strong>${ofertasAtivas.length}</strong><span>Ofertas ativas</span><p>Disciplinas abertas por período.</p></div>
+        <div class="card"><strong>${matriculas.length}</strong><span>Matrículas</span><p>Alunos vinculados às disciplinas.</p></div>
+        <div class="card"><strong>${aulasPendentes}</strong><span>Chamadas pendentes</span><p>Aulas cadastradas ainda sem frequência.</p></div>
+        <div class="card ${alertasFrequencia.length ? "card-alerta" : ""}"><strong>${alertasFrequencia.length}</strong><span>Alertas de frequência</span><p>Alunos abaixo do mínimo obrigatório.</p></div>
+      </section>
+
+      ${matriculasSemProfessor.length ? `
+        <section class="bloco bloco-alerta-suave">
+          <div class="bloco-topo">
+            <div>
+              <h2>Correção recomendada</h2>
+              <p>Encontramos ${matriculasSemProfessor.length} matrícula(s) antiga(s) sem vínculo correto com professor. Isso pode impedir que o professor veja alunos em notas ou frequência.</p>
+            </div>
+            <button id="corrigir-vinculos-professor" class="botao botao-primario">Corrigir vínculos</button>
+          </div>
+        </section>
+      ` : ""}
+
       <section class="bloco">
-        <h2>Próximos passos recomendados</h2>
-        <p>Cadastre cursos, disciplinas, professores e alunos. Depois monte a matriz curricular, crie ofertas, matricule alunos e configure os dias de aula na área de frequência.</p>
+        <h2>Ordem sugerida para usar o sistema</h2>
+        <div class="passos-painel">
+          <div><strong>1</strong><span>Cadastrar cursos, disciplinas, professores e alunos.</span></div>
+          <div><strong>2</strong><span>Montar matriz curricular e dependências.</span></div>
+          <div><strong>3</strong><span>Criar ofertas de disciplinas e matricular alunos.</span></div>
+          <div><strong>4</strong><span>Configurar aulas, lançar frequência e notas.</span></div>
+        </div>
       </section>
     `;
+
+    $$(`[data-ir]`).forEach((botao) => botao.addEventListener("click", () => navegar(botao.dataset.ir)));
+    const botaoCorrigir = $("#corrigir-vinculos-professor");
+    if (botaoCorrigir) {
+      botaoCorrigir.addEventListener("click", async () => {
+        botaoCorrigir.disabled = true;
+        botaoCorrigir.textContent = "Corrigindo...";
+        await corrigirVinculosProfessorMatriculas();
+        mostrarMensagem("Vínculos das matrículas corrigidos com sucesso.");
+        await renderDashboard();
+      });
+    }
     return;
   }
 
   if (perfilAtual.tipo === TIPOS_USUARIO.PROFESSOR) {
     await carregarBaseAcademica();
-    const minhasOfertas = cache.ofertas.filter((oferta) => oferta.professorId === usuarioAtual.uid);
+    const minhasOfertas = cache.ofertas.filter((oferta) => oferta.professorId === usuarioAtual.uid && oferta.ativa !== false);
     const minhasMatriculas = await buscarPorCampo(COLECOES.matriculas, "professorId", "==", usuarioAtual.uid);
+    const minhasFrequencias = await buscarPorCampo(COLECOES.frequencias, "professorId", "==", usuarioAtual.uid);
+    const idsOfertas = new Set(minhasOfertas.map((oferta) => oferta.id));
+    const minhasAulas = cache.aulas.filter((aula) => idsOfertas.has(aula.ofertaId));
+    const chamadasPendentes = minhasAulas.filter((aula) => aula.chamadaRealizada !== true).length;
+    const alunosUnicos = new Set(minhasMatriculas.map((matricula) => matricula.alunoId)).size;
 
-    definirTitulo("Painel do professor", "Suas disciplinas e turmas.");
+    const alertasFrequencia = minhasMatriculas.filter((matricula) => {
+      const oferta = minhasOfertas.find((item) => item.id === matricula.ofertaId);
+      const aulasOferta = minhasAulas.filter((aula) => aula.ofertaId === matricula.ofertaId);
+      const frequenciasOferta = minhasFrequencias.filter((frequencia) => frequencia.ofertaId === matricula.ofertaId);
+      return calcularResumoFrequencia(matricula, oferta, aulasOferta, frequenciasOferta).alerta;
+    });
+
+    const linhasOfertas = minhasOfertas.map((oferta) => {
+      const totalAlunos = minhasMatriculas.filter((matricula) => matricula.ofertaId === oferta.id).length;
+      const totalAulas = minhasAulas.filter((aula) => aula.ofertaId === oferta.id).length;
+      const pendentes = minhasAulas.filter((aula) => aula.ofertaId === oferta.id && aula.chamadaRealizada !== true).length;
+      return `
+        <tr>
+          <td>${protegerTexto(nomeDisciplina(oferta.disciplinaId))}</td>
+          <td>${protegerTexto(oferta.turma || "-")}</td>
+          <td>${protegerTexto(oferta.periodoLetivo || "-")}</td>
+          <td>${totalAlunos}</td>
+          <td>${totalAulas}</td>
+          <td>${pendentes}</td>
+        </tr>
+      `;
+    });
+
+    definirTitulo("Painel do professor", "Resumo das suas disciplinas, notas e frequência.");
     conteudo().innerHTML = `
-      <section class="grid-cards">
-        <div class="card"><strong>${minhasOfertas.length}</strong><span>Disciplinas</span><p>Ofertas sob sua responsabilidade.</p></div>
-        <div class="card"><strong>${minhasMatriculas.length}</strong><span>Alunos</span><p>Matrículas nas suas disciplinas.</p></div>
-      </section>
-      <section class="bloco">
-        <h2>Atalhos</h2>
+      <section class="painel-guia">
+        <div>
+          <span class="rotulo-painel">Área do professor</span>
+          <h2>Olá, ${protegerTexto(perfilAtual.nome || "professor")}.</h2>
+          <p>Você visualiza apenas as disciplinas em que foi definido como professor responsável. Use os atalhos abaixo para lançar notas ou fazer a chamada.</p>
+        </div>
         <div class="acoes">
           <button class="botao botao-primario" data-ir="professor-notas">Lançar notas</button>
           <button class="botao botao-secundario" data-ir="professor-frequencia">Fazer frequência</button>
-          <button class="botao botao-secundario" data-ir="professor-ofertas">Ver minhas disciplinas</button>
+          <button class="botao botao-secundario" data-ir="professor-ofertas">Ver disciplinas</button>
         </div>
+      </section>
+
+      <section class="grid-cards">
+        <div class="card card-destaque"><strong>${minhasOfertas.length}</strong><span>Minhas disciplinas</span><p>Ofertas sob sua responsabilidade.</p></div>
+        <div class="card"><strong>${alunosUnicos}</strong><span>Alunos vinculados</span><p>Alunos nas suas disciplinas.</p></div>
+        <div class="card"><strong>${minhasAulas.length}</strong><span>Aulas cadastradas</span><p>Dias de aula criados pelo coordenador.</p></div>
+        <div class="card ${chamadasPendentes ? "card-alerta" : ""}"><strong>${chamadasPendentes}</strong><span>Chamadas pendentes</span><p>Aulas ainda sem frequência.</p></div>
+        <div class="card ${alertasFrequencia.length ? "card-alerta" : ""}"><strong>${alertasFrequencia.length}</strong><span>Alertas</span><p>Alunos abaixo da frequência mínima.</p></div>
+      </section>
+
+      <section class="bloco">
+        <h2>Resumo por disciplina</h2>
+        ${montarTabela(["Disciplina", "Turma", "Período", "Alunos", "Aulas", "Pendentes"], linhasOfertas)}
+      </section>
+
+      <section class="bloco bloco-info-suave">
+        <h2>Sobre a frequência</h2>
+        <p>Se a tela de frequência não mostrar alunos, confira com o coordenador se os alunos foram matriculados na oferta correta e se a oferta está vinculada ao seu usuário como professor responsável.</p>
       </section>
     `;
     $$(`[data-ir]`).forEach((botao) => botao.addEventListener("click", () => navegar(botao.dataset.ir)));
@@ -316,26 +415,91 @@ async function renderDashboard() {
   await renderAlunoResumo();
 }
 
+async function corrigirVinculosProfessorMatriculas() {
+  await carregarBaseAcademica();
+  const matriculas = await buscarTodos(COLECOES.matriculas);
+  const lote = writeBatch(db);
+  let alteracoes = 0;
+
+  matriculas.forEach((matricula) => {
+    const oferta = cache.ofertas.find((item) => item.id === matricula.ofertaId);
+    if (!oferta?.professorId) return;
+    if (matricula.professorId === oferta.professorId && matricula.cursoId === oferta.cursoId && matricula.disciplinaId === oferta.disciplinaId) return;
+
+    lote.update(doc(db, COLECOES.matriculas, matricula.id), {
+      professorId: oferta.professorId,
+      cursoId: oferta.cursoId,
+      disciplinaCursoId: oferta.disciplinaCursoId,
+      disciplinaId: oferta.disciplinaId,
+      atualizadoEm: serverTimestamp(),
+      atualizadoPor: usuarioAtual.uid
+    });
+    alteracoes += 1;
+  });
+
+  if (alteracoes > 0) await lote.commit();
+  return alteracoes;
+}
+
 async function renderAlunoResumo() {
   await carregarBaseAcademica();
   const matriculas = await buscarPorCampo(COLECOES.matriculas, "alunoId", "==", usuarioAtual.uid);
+  const frequenciasAluno = await buscarPorCampo(COLECOES.frequencias, "alunoId", "==", usuarioAtual.uid);
   const aprovadas = matriculas.filter((matricula) => matricula.situacao === SITUACOES.APROVADO).length;
+  const cursando = matriculas.filter((matricula) => matricula.situacao === SITUACOES.CURSANDO).length;
   const cursoId = perfilAtual.cursoId;
   const totalDisciplinas = cache.disciplinasCurso.filter((item) => item.cursoId === cursoId).length;
   const progresso = totalDisciplinas ? ((aprovadas / totalDisciplinas) * 100).toFixed(1) : 0;
 
-  definirTitulo("Painel do aluno", "Suas disciplinas, notas e progresso.");
+  const alertasFrequencia = matriculas.filter((matricula) => {
+    const oferta = cache.ofertas.find((item) => item.id === matricula.ofertaId);
+    const aulasOferta = cache.aulas.filter((aula) => aula.ofertaId === matricula.ofertaId);
+    const frequenciasOferta = frequenciasAluno.filter((frequencia) => frequencia.ofertaId === matricula.ofertaId);
+    return calcularResumoFrequencia(matricula, oferta, aulasOferta, frequenciasOferta).alerta;
+  });
+
+  const linhas = matriculas.slice(0, 6).map((matricula) => {
+    const oferta = cache.ofertas.find((item) => item.id === matricula.ofertaId);
+    return `
+      <tr>
+        <td>${protegerTexto(nomeDisciplina(matricula.disciplinaId || oferta?.disciplinaId))}</td>
+        <td>${protegerTexto(nomeUsuario(matricula.professorId || oferta?.professorId))}</td>
+        <td><span class="badge ${classeSituacao(matricula.situacao)}">${protegerTexto(textoSituacao(matricula.situacao))}</span></td>
+        <td>${formatarNumero(matricula.mediaFinal || 0)}</td>
+      </tr>
+    `;
+  });
+
+  definirTitulo("Painel do aluno", "Resumo das suas disciplinas, notas e frequência.");
   conteudo().innerHTML = `
-    <section class="grid-cards">
-      <div class="card"><strong>${matriculas.length}</strong><span>Disciplinas cursadas</span><p>Inclui disciplinas em andamento.</p></div>
-      <div class="card"><strong>${aprovadas}</strong><span>Disciplinas aprovadas</span><p>Concluídas com aproveitamento.</p></div>
-      <div class="card"><strong>${formatarNumero(progresso)}%</strong><span>Progresso no curso</span><p>${protegerTexto(nomeCurso(cursoId))}</p></div>
+    <section class="painel-guia">
+      <div>
+        <span class="rotulo-painel">Área do aluno</span>
+        <h2>Olá, ${protegerTexto(perfilAtual.nome || "aluno")}.</h2>
+        <p>Aqui você acompanha somente suas informações: disciplinas, professores, notas, frequência e progresso no curso.</p>
+      </div>
+      <div class="acoes">
+        <button class="botao botao-primario" data-ir="aluno-notas">Ver notas</button>
+        <button class="botao botao-secundario" data-ir="aluno-frequencia">Ver frequência</button>
+        <button class="botao botao-secundario" data-ir="aluno-progresso">Ver progresso</button>
+      </div>
     </section>
+
+    <section class="grid-cards">
+      <div class="card card-destaque"><strong>${matriculas.length}</strong><span>Disciplinas vinculadas</span><p>Inclui disciplinas em andamento e concluídas.</p></div>
+      <div class="card"><strong>${cursando}</strong><span>Cursando</span><p>Disciplinas em andamento.</p></div>
+      <div class="card"><strong>${aprovadas}</strong><span>Aprovadas</span><p>Disciplinas concluídas.</p></div>
+      <div class="card"><strong>${formatarNumero(progresso)}%</strong><span>Progresso no curso</span><p>${protegerTexto(nomeCurso(cursoId))}</p></div>
+      <div class="card ${alertasFrequencia.length ? "card-alerta" : ""}"><strong>${alertasFrequencia.length}</strong><span>Alertas de frequência</span><p>Disciplinas abaixo do mínimo.</p></div>
+    </section>
+
     <section class="bloco">
-      <h2>Resumo</h2>
-      <p>Use o menu para ver suas notas, frequência, professores responsáveis e disciplinas pendentes.</p>
+      <h2>Minhas disciplinas mais recentes</h2>
+      ${montarTabela(["Disciplina", "Professor", "Situação", "Média"], linhas)}
     </section>
   `;
+
+  $$(`[data-ir]`).forEach((botao) => botao.addEventListener("click", () => navegar(botao.dataset.ir)));
 }
 
 async function renderCursos() {
@@ -897,17 +1061,11 @@ async function renderMatriculas() {
   const ofertaSelecionadaId = sessionStorage.getItem("ofertaMatriculas") || ofertas[0]?.id || "";
   const todasMatriculas = await buscarTodos(COLECOES.matriculas);
   const matriculasOferta = ofertaSelecionadaId ? todasMatriculas.filter((matricula) => matricula.ofertaId === ofertaSelecionadaId) : [];
-  const alunosUnicosMatriculados = new Set(todasMatriculas.map((matricula) => matricula.alunoId)).size;
   const ofertaSelecionada = ofertas.find((oferta) => oferta.id === ofertaSelecionadaId);
-  const totalCursando = matriculasOferta.filter((matricula) => matricula.situacao === SITUACOES.CURSANDO).length;
-  const totalAprovados = matriculasOferta.filter((matricula) => matricula.situacao === SITUACOES.APROVADO).length;
-  const totalReprovados = matriculasOferta.filter((matricula) => matricula.situacao === SITUACOES.REPROVADO).length;
-  const totalOutros = matriculasOferta.length - totalCursando - totalAprovados - totalReprovados;
-  const somaMedias = matriculasOferta.reduce((total, matricula) => total + Number(matricula.mediaFinal || 0), 0);
-  const mediaTurma = matriculasOferta.length ? somaMedias / matriculasOferta.length : 0;
 
-  const linhas = matriculasOferta.map((matricula) => `
+  const linhas = matriculasOferta.map((matricula, indice) => `
     <tr>
+      <td class="coluna-numero">${indice + 1}</td>
       <td>${protegerTexto(nomeUsuario(matricula.alunoId) || matricula.alunoNome)}</td>
       <td><span class="badge ${classeSituacao(matricula.situacao)}">${protegerTexto(textoSituacao(matricula.situacao))}</span></td>
       <td>${formatarNumero(matricula.mediaFinal || 0)}</td>
@@ -915,14 +1073,15 @@ async function renderMatriculas() {
     </tr>
   `);
 
-  conteudo().innerHTML = `
-    <section class="grid-cards grid-cards-pequeno">
-      <div class="card"><strong>${ofertas.length}</strong><span>Ofertas ativas</span><p>Disciplinas disponíveis para matrícula.</p></div>
-      <div class="card"><strong>${alunos.length}</strong><span>Alunos ativos</span><p>Alunos disponíveis para matrícula.</p></div>
-      <div class="card"><strong>${todasMatriculas.length}</strong><span>Total de matrículas</span><p>Quantidade geral no sistema.</p></div>
-      <div class="card"><strong>${alunosUnicosMatriculados}</strong><span>Alunos matriculados</span><p>Alunos únicos em alguma oferta.</p></div>
-    </section>
+  linhas.push(`
+    <tr class="linha-total">
+      <td></td>
+      <td><strong>Total</strong></td>
+      <td colspan="3"><strong>${matriculasOferta.length} aluno(s) na disciplina</strong></td>
+    </tr>
+  `);
 
+  conteudo().innerHTML = `
     <section class="bloco">
       <h2>Matricular aluno manualmente</h2>
       <form id="form-matricula" class="form-grid">
@@ -972,16 +1131,7 @@ async function renderMatriculas() {
         <select id="filtro-oferta-matriculas"></select>
       </div>
 
-      <section class="grid-cards grid-cards-pequeno cards-internos">
-        <div class="card"><strong>${matriculasOferta.length}</strong><span>Nesta oferta</span><p>Total de alunos na disciplina selecionada.</p></div>
-        <div class="card"><strong>${totalCursando}</strong><span>Cursando</span><p>Alunos em andamento.</p></div>
-        <div class="card"><strong>${totalAprovados}</strong><span>Aprovados</span><p>Alunos já aprovados.</p></div>
-        <div class="card"><strong>${totalReprovados}</strong><span>Reprovados</span><p>Alunos reprovados.</p></div>
-        <div class="card"><strong>${totalOutros}</strong><span>Outros status</span><p>Trancado ou dependência.</p></div>
-        <div class="card"><strong>${formatarNumero(mediaTurma)}</strong><span>Média da turma</span><p>Considera as médias já lançadas.</p></div>
-      </section>
-
-      ${montarTabela(["Aluno", "Situação", "Média", "Aproveitamento"], linhas)}
+      ${montarTabela(["Nº", "Aluno", "Situação", "Média", "Aproveitamento"], linhas)}
     </section>
   `;
 
@@ -1191,8 +1341,20 @@ async function renderNotas(coordenador = false) {
     : cache.ofertas.filter((oferta) => oferta.professorId === usuarioAtual.uid);
 
   const ofertaSelecionadaId = sessionStorage.getItem("ofertaNotas") || ofertasPermitidas[0]?.id || "";
-  const matriculas = ofertaSelecionadaId ? await buscarPorCampo(COLECOES.matriculas, "ofertaId", "==", ofertaSelecionadaId) : [];
-  const notas = ofertaSelecionadaId ? await buscarPorCampo(COLECOES.notas, "ofertaId", "==", ofertaSelecionadaId) : [];
+  let matriculas = [];
+  let notas = [];
+
+  if (ofertaSelecionadaId) {
+    if (coordenador) {
+      matriculas = await buscarPorCampo(COLECOES.matriculas, "ofertaId", "==", ofertaSelecionadaId);
+      notas = await buscarPorCampo(COLECOES.notas, "ofertaId", "==", ofertaSelecionadaId);
+    } else {
+      const matriculasProfessor = await buscarPorCampo(COLECOES.matriculas, "professorId", "==", usuarioAtual.uid);
+      const notasProfessor = await buscarPorCampo(COLECOES.notas, "professorId", "==", usuarioAtual.uid);
+      matriculas = matriculasProfessor.filter((matricula) => matricula.ofertaId === ofertaSelecionadaId);
+      notas = notasProfessor.filter((nota) => nota.ofertaId === ofertaSelecionadaId);
+    }
+  }
   const notaPorMatricula = new Map(notas.map((nota) => [nota.matriculaId || nota.id, nota]));
 
   const linhas = matriculas.map((matricula) => {
@@ -1477,8 +1639,13 @@ async function renderProfessorFrequencia() {
     : [];
   const aulaSelecionadaId = sessionStorage.getItem("aulaFrequencia") || aulasOferta[0]?.id || "";
   const aulaSelecionada = aulasOferta.find((aula) => aula.id === aulaSelecionadaId);
-  const matriculas = ofertaSelecionadaId ? await buscarPorCampo(COLECOES.matriculas, "ofertaId", "==", ofertaSelecionadaId) : [];
-  const frequenciasOferta = ofertaSelecionadaId ? await buscarPorCampo(COLECOES.frequencias, "professorId", "==", usuarioAtual.uid) : [];
+  let matriculas = [];
+  let frequenciasOferta = [];
+  if (ofertaSelecionadaId) {
+    const matriculasProfessor = await buscarPorCampo(COLECOES.matriculas, "professorId", "==", usuarioAtual.uid);
+    matriculas = matriculasProfessor.filter((matricula) => matricula.ofertaId === ofertaSelecionadaId);
+    frequenciasOferta = await buscarPorCampo(COLECOES.frequencias, "professorId", "==", usuarioAtual.uid);
+  }
   const frequenciasDaOferta = frequenciasOferta.filter((frequencia) => frequencia.ofertaId === ofertaSelecionadaId);
   const frequenciasAula = frequenciasDaOferta.filter((frequencia) => frequencia.aulaId === aulaSelecionadaId);
   const frequenciaPorMatricula = new Map(frequenciasAula.map((frequencia) => [frequencia.matriculaId, frequencia]));

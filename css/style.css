@@ -574,77 +574,169 @@ td select {
   margin: 14px 0;
 }
 
-.form-edicao {
-  border-color: #bfdbfe;
-  box-shadow: 0 0 0 4px rgba(37, 87, 214, 0.08), 0 8px 28px rgba(15, 23, 42, 0.04);
-}
-
-.botao-pequeno {
-  padding: 8px 10px;
-  font-size: 0.82rem;
-  border-radius: 10px;
-}
-
-input[readonly] {
+/* Ajustes: filtros, contadores e totalizadores */
+.filtros-lista {
+  margin: 10px 0 16px;
+  padding: 14px;
   background: #f8fafc;
+  border: 1px solid var(--cor-borda);
+  border-radius: 14px;
+}
+
+.tabela-com-margem {
+  margin-top: 12px;
+}
+
+.bloco-topo-responsivo select {
+  min-width: 260px;
+}
+
+.cards-internos {
+  margin-top: 4px;
+  margin-bottom: 16px;
+}
+
+.resumo-importacao {
+  background: #f8fafc;
+  border: 1px solid var(--cor-borda);
+  border-radius: 12px;
   color: var(--cor-texto-suave);
-  cursor: not-allowed;
+  padding: 12px 14px;
+  font-size: 0.92rem;
 }
 
-
-/* Campos de senha com botão de visualização */
-.campo-senha {
-  position: relative;
-  width: 100%;
-}
-
-.campo-senha input {
-  padding-right: 52px;
-}
-
-.botao-olho {
-  position: absolute;
-  top: 50%;
-  right: 10px;
-  transform: translateY(-50%);
-  width: 38px;
-  height: 38px;
-  border: 0;
-  border-radius: 10px;
-  background: #eef2ff;
-  color: var(--cor-primaria);
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1rem;
-}
-
-.botao-olho:hover,
-.botao-olho:focus {
-  background: #dbeafe;
-  outline: none;
-}
-
-.botao-link {
+.estado-vazio-tabela {
+  box-shadow: none;
   border: 0;
   background: transparent;
-  color: var(--cor-primaria);
+  padding: 12px;
+}
+
+@media (max-width: 780px) {
+  .bloco-topo-responsivo {
+    flex-direction: column;
+  }
+
+  .bloco-topo-responsivo select {
+    min-width: 100%;
+  }
+}
+
+.coluna-numero {
+  width: 70px;
+  color: var(--cor-texto-suave);
   font-weight: 700;
-  cursor: pointer;
-  padding: 8px 4px 0;
   text-align: center;
 }
 
-.botao-link:hover,
-.botao-link:focus {
-  color: var(--cor-primaria-escura);
-  text-decoration: underline;
-  outline: none;
+.linha-total td {
+  background: #f8fafc;
+  border-top: 2px solid var(--cor-borda);
 }
 
-.alerta-sucesso {
-  border-color: #bbf7d0;
-  background: #f0fdf4;
-  color: var(--cor-sucesso);
+.linha-total strong {
+  color: var(--cor-texto);
+}
+
+/* Painéis iniciais mais explicativos */
+.painel-guia {
+  background: linear-gradient(135deg, #ffffff, #eef4ff);
+  border: 1px solid var(--cor-borda);
+  border-radius: 22px;
+  padding: 22px;
+  margin-bottom: 18px;
+  box-shadow: 0 12px 34px rgba(15, 23, 42, 0.06);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 18px;
+}
+
+.painel-guia h2 {
+  margin: 4px 0 8px;
+  font-size: 1.55rem;
+}
+
+.painel-guia p {
+  margin: 0;
+  color: var(--cor-texto-suave);
+  max-width: 780px;
+  line-height: 1.45;
+}
+
+.rotulo-painel {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  background: #dbeafe;
+  color: var(--cor-primaria);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.card-destaque {
+  border-color: #bfdbfe;
+  background: linear-gradient(180deg, #ffffff, #f8fbff);
+}
+
+.card-alerta {
+  border-color: #fecaca;
+  background: #fff7f7;
+}
+
+.bloco-alerta-suave {
+  background: #fff7ed;
+  border-color: #fed7aa;
+}
+
+.bloco-info-suave {
+  background: #f8fafc;
+}
+
+.passos-painel {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.passos-painel div {
+  border: 1px solid var(--cor-borda);
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 14px;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.passos-painel strong {
+  width: 32px;
+  height: 32px;
+  border-radius: 12px;
+  background: var(--cor-primaria);
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+
+.passos-painel span {
+  color: var(--cor-texto-suave);
+  line-height: 1.35;
+}
+
+@media (max-width: 780px) {
+  .painel-guia {
+    flex-direction: column;
+  }
+
+  .painel-guia .acoes,
+  .painel-guia .botao {
+    width: 100%;
+  }
 }

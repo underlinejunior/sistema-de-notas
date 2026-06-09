@@ -13,7 +13,6 @@ import {
   setDoc,
   addDoc,
   updateDoc,
-  deleteDoc,
   query,
   where,
   serverTimestamp,
@@ -183,30 +182,6 @@ function opcoesOfertasFrequencia(ofertas) {
   }));
 }
 
-function badgeAtivo(valor, textoAtivo = "Ativo", textoInativo = "Inativo") {
-  return `<span class="badge ${valor === false ? "badge-muted" : "badge-success"}">${valor === false ? textoInativo : textoAtivo}</span>`;
-}
-
-function botaoEditar(chave, id) {
-  return `<button class="botao botao-secundario botao-pequeno" data-editar-${chave}="${id}">Editar</button>`;
-}
-
-function botaoToggle(chave, id, ativo = true, textoAtivo = "Inativar", textoInativo = "Reativar") {
-  const classe = ativo === false ? "botao-secundario" : "botao-perigo";
-  const texto = ativo === false ? textoInativo : textoAtivo;
-  return `<button class="botao ${classe} botao-pequeno" data-toggle-${chave}="${id}">${texto}</button>`;
-}
-
-function botaoRemover(chave, id, texto = "Remover") {
-  return `<button class="botao botao-perigo botao-pequeno" data-remover-${chave}="${id}">${texto}</button>`;
-}
-
-function limparEdicao(chaveSessao, renderizar) {
-  sessionStorage.removeItem(chaveSessao);
-  return renderizar();
-}
-
-
 function renderizarMenu() {
   const menu = $("#menu-principal");
   const itens = menuPorPerfil[perfilAtual.tipo] || [];
@@ -368,98 +343,50 @@ async function renderCursos() {
   mostrarCarregando(conteudo());
   cache.cursos = await buscarTodos(COLECOES.cursos);
 
-  const cursoEdicaoId = sessionStorage.getItem("editarCursoId");
-  const cursoEdicao = cursoEdicaoId ? cache.cursos.find((curso) => curso.id === cursoEdicaoId) : null;
-  if (cursoEdicaoId && !cursoEdicao) sessionStorage.removeItem("editarCursoId");
-
   const linhas = cache.cursos.map((curso) => `
     <tr>
       <td>${protegerTexto(curso.nome)}</td>
       <td>${protegerTexto(curso.modalidade || "-")}</td>
-      <td>${badgeAtivo(curso.ativo)}</td>
-      <td><div class="acoes">${botaoEditar("curso", curso.id)}${botaoToggle("curso", curso.id, curso.ativo)}</div></td>
+      <td><span class="badge ${curso.ativo === false ? "badge-muted" : "badge-success"}">${curso.ativo === false ? "Inativo" : "Ativo"}</span></td>
     </tr>
   `);
 
   conteudo().innerHTML = `
-    <section class="bloco ${cursoEdicao ? "form-edicao" : ""}">
+    <section class="bloco">
       <div class="bloco-topo">
         <div>
-          <h2>${cursoEdicao ? "Editar curso" : "Novo curso"}</h2>
-          <p>${cursoEdicao ? "Altere as informações e salve." : "Cadastre os cursos que terão disciplinas e alunos."}</p>
+          <h2>Novo curso</h2>
+          <p>Cadastre os cursos que terão disciplinas e alunos.</p>
         </div>
-        ${cursoEdicao ? `<button id="cancelar-edicao-curso" class="botao botao-neutro" type="button">Cancelar edição</button>` : ""}
       </div>
       <form id="form-curso" class="form-grid">
         <div>
           <label>Nome do curso</label>
-          <input name="nome" required placeholder="Ex.: Análise e Desenvolvimento de Sistemas" value="${protegerTexto(cursoEdicao?.nome || "")}" />
+          <input name="nome" required placeholder="Ex.: Análise e Desenvolvimento de Sistemas" />
         </div>
         <div>
           <label>Modalidade</label>
-          <input name="modalidade" placeholder="Ex.: Superior, Técnico, Médio" value="${protegerTexto(cursoEdicao?.modalidade || "")}" />
+          <input name="modalidade" placeholder="Ex.: Superior, Técnico, Médio" />
         </div>
-        ${cursoEdicao ? `
-          <div>
-            <label>Status</label>
-            <select name="ativo">
-              <option value="true" ${cursoEdicao.ativo !== false ? "selected" : ""}>Ativo</option>
-              <option value="false" ${cursoEdicao.ativo === false ? "selected" : ""}>Inativo</option>
-            </select>
-          </div>
-        ` : ""}
-        <button class="botao botao-primario" type="submit">${cursoEdicao ? "Salvar alterações" : "Salvar curso"}</button>
+        <button class="botao botao-primario" type="submit">Salvar curso</button>
       </form>
     </section>
     <section class="bloco">
       <h2>Cursos cadastrados</h2>
-      ${montarTabela(["Curso", "Modalidade", "Status", "Ações"], linhas)}
+      ${montarTabela(["Curso", "Modalidade", "Status"], linhas)}
     </section>
   `;
-
-  if (cursoEdicao) {
-    $("#cancelar-edicao-curso").addEventListener("click", () => limparEdicao("editarCursoId", renderCursos));
-  }
-
-  $$('[data-editar-curso]').forEach((botao) => botao.addEventListener("click", async () => {
-    sessionStorage.setItem("editarCursoId", botao.dataset.editarCurso);
-    await renderCursos();
-  }));
-
-  $$('[data-toggle-curso]').forEach((botao) => botao.addEventListener("click", async () => {
-    const curso = cache.cursos.find((item) => item.id === botao.dataset.toggleCurso);
-    if (!curso) return;
-    await updateDoc(doc(db, COLECOES.cursos, curso.id), {
-      ativo: curso.ativo === false,
-      atualizadoEm: serverTimestamp(),
-      atualizadoPor: usuarioAtual.uid
-    });
-    mostrarMensagem(curso.ativo === false ? "Curso reativado." : "Curso inativado.");
-    await renderCursos();
-  }));
 
   $("#form-curso").addEventListener("submit", async (evento) => {
     evento.preventDefault();
     const dados = new FormData(evento.target);
-    const payload = {
+    await addDoc(collection(db, COLECOES.cursos), {
       nome: dados.get("nome").trim(),
       modalidade: dados.get("modalidade").trim(),
-      ativo: cursoEdicao ? dados.get("ativo") === "true" : true,
-      atualizadoEm: serverTimestamp(),
-      atualizadoPor: usuarioAtual.uid
-    };
-
-    if (cursoEdicao) {
-      await updateDoc(doc(db, COLECOES.cursos, cursoEdicao.id), payload);
-      sessionStorage.removeItem("editarCursoId");
-      mostrarMensagem("Curso atualizado com sucesso.");
-    } else {
-      await addDoc(collection(db, COLECOES.cursos), {
-        ...payload,
-        criadoEm: serverTimestamp()
-      });
-      mostrarMensagem("Curso cadastrado com sucesso.");
-    }
+      ativo: true,
+      criadoEm: serverTimestamp()
+    });
+    mostrarMensagem("Curso cadastrado com sucesso.");
     await renderCursos();
   });
 }
@@ -469,104 +396,51 @@ async function renderDisciplinas() {
   mostrarCarregando(conteudo());
   cache.disciplinas = await buscarTodos(COLECOES.disciplinas);
 
-  const disciplinaEdicaoId = sessionStorage.getItem("editarDisciplinaId");
-  const disciplinaEdicao = disciplinaEdicaoId ? cache.disciplinas.find((disciplina) => disciplina.id === disciplinaEdicaoId) : null;
-  if (disciplinaEdicaoId && !disciplinaEdicao) sessionStorage.removeItem("editarDisciplinaId");
-
   const linhas = cache.disciplinas.map((disciplina) => `
     <tr>
       <td>${protegerTexto(disciplina.nome)}</td>
       <td>${protegerTexto(disciplina.codigo || "-")}</td>
       <td>${protegerTexto(disciplina.cargaHoraria || "-")}h</td>
-      <td>${badgeAtivo(disciplina.ativo, "Ativa", "Inativa")}</td>
-      <td><div class="acoes">${botaoEditar("disciplina", disciplina.id)}${botaoToggle("disciplina", disciplina.id, disciplina.ativo)}</div></td>
+      <td><span class="badge ${disciplina.ativo === false ? "badge-muted" : "badge-success"}">${disciplina.ativo === false ? "Inativa" : "Ativa"}</span></td>
     </tr>
   `);
 
   conteudo().innerHTML = `
-    <section class="bloco ${disciplinaEdicao ? "form-edicao" : ""}">
-      <div class="bloco-topo">
-        <div>
-          <h2>${disciplinaEdicao ? "Editar disciplina" : "Nova disciplina"}</h2>
-          <p>${disciplinaEdicao ? "Atualize nome, código, carga horária ou status." : "Cadastre a disciplina uma vez e depois vincule à matriz do curso."}</p>
-        </div>
-        ${disciplinaEdicao ? `<button id="cancelar-edicao-disciplina" class="botao botao-neutro" type="button">Cancelar edição</button>` : ""}
-      </div>
+    <section class="bloco">
+      <h2>Nova disciplina</h2>
       <form id="form-disciplina" class="form-grid">
         <div>
           <label>Nome</label>
-          <input name="nome" required placeholder="Ex.: Programação I" value="${protegerTexto(disciplinaEdicao?.nome || "")}" />
+          <input name="nome" required placeholder="Ex.: Programação I" />
         </div>
         <div>
           <label>Código</label>
-          <input name="codigo" placeholder="Ex.: ADS001" value="${protegerTexto(disciplinaEdicao?.codigo || "")}" />
+          <input name="codigo" placeholder="Ex.: ADS001" />
         </div>
         <div>
           <label>Carga horária</label>
-          <input name="cargaHoraria" type="number" min="1" placeholder="80" value="${protegerTexto(disciplinaEdicao?.cargaHoraria || "")}" />
+          <input name="cargaHoraria" type="number" min="1" placeholder="80" />
         </div>
-        ${disciplinaEdicao ? `
-          <div>
-            <label>Status</label>
-            <select name="ativo">
-              <option value="true" ${disciplinaEdicao.ativo !== false ? "selected" : ""}>Ativa</option>
-              <option value="false" ${disciplinaEdicao.ativo === false ? "selected" : ""}>Inativa</option>
-            </select>
-          </div>
-        ` : ""}
-        <button class="botao botao-primario" type="submit">${disciplinaEdicao ? "Salvar alterações" : "Salvar disciplina"}</button>
+        <button class="botao botao-primario" type="submit">Salvar disciplina</button>
       </form>
     </section>
     <section class="bloco">
       <h2>Disciplinas cadastradas</h2>
-      ${montarTabela(["Disciplina", "Código", "Carga horária", "Status", "Ações"], linhas)}
+      ${montarTabela(["Disciplina", "Código", "Carga horária", "Status"], linhas)}
     </section>
   `;
-
-  if (disciplinaEdicao) {
-    $("#cancelar-edicao-disciplina").addEventListener("click", () => limparEdicao("editarDisciplinaId", renderDisciplinas));
-  }
-
-  $$('[data-editar-disciplina]').forEach((botao) => botao.addEventListener("click", async () => {
-    sessionStorage.setItem("editarDisciplinaId", botao.dataset.editarDisciplina);
-    await renderDisciplinas();
-  }));
-
-  $$('[data-toggle-disciplina]').forEach((botao) => botao.addEventListener("click", async () => {
-    const disciplina = cache.disciplinas.find((item) => item.id === botao.dataset.toggleDisciplina);
-    if (!disciplina) return;
-    await updateDoc(doc(db, COLECOES.disciplinas, disciplina.id), {
-      ativo: disciplina.ativo === false,
-      atualizadoEm: serverTimestamp(),
-      atualizadoPor: usuarioAtual.uid
-    });
-    mostrarMensagem(disciplina.ativo === false ? "Disciplina reativada." : "Disciplina inativada.");
-    await renderDisciplinas();
-  }));
 
   $("#form-disciplina").addEventListener("submit", async (evento) => {
     evento.preventDefault();
     const dados = new FormData(evento.target);
-    const payload = {
+    await addDoc(collection(db, COLECOES.disciplinas), {
       nome: dados.get("nome").trim(),
       codigo: dados.get("codigo").trim(),
       cargaHoraria: Number(dados.get("cargaHoraria") || 0),
-      ativo: disciplinaEdicao ? dados.get("ativo") === "true" : true,
-      atualizadoEm: serverTimestamp(),
-      atualizadoPor: usuarioAtual.uid
-    };
-
-    if (disciplinaEdicao) {
-      await updateDoc(doc(db, COLECOES.disciplinas, disciplinaEdicao.id), payload);
-      sessionStorage.removeItem("editarDisciplinaId");
-      mostrarMensagem("Disciplina atualizada com sucesso.");
-    } else {
-      await addDoc(collection(db, COLECOES.disciplinas), {
-        ...payload,
-        criadoEm: serverTimestamp()
-      });
-      mostrarMensagem("Disciplina cadastrada com sucesso.");
-    }
+      ativo: true,
+      criadoEm: serverTimestamp()
+    });
+    mostrarMensagem("Disciplina cadastrada com sucesso.");
     await renderDisciplinas();
   });
 }
@@ -576,178 +450,214 @@ async function renderUsuarios() {
   mostrarCarregando(conteudo());
   await carregarBaseAcademica();
 
-  const usuarioEdicaoId = sessionStorage.getItem("editarUsuarioId");
-  const usuarioEdicao = usuarioEdicaoId ? cache.usuarios.find((usuario) => usuario.id === usuarioEdicaoId) : null;
-  if (usuarioEdicaoId && !usuarioEdicao) sessionStorage.removeItem("editarUsuarioId");
+  const filtrosIniciais = {
+    busca: sessionStorage.getItem("filtroUsuariosBusca") || "",
+    perfil: sessionStorage.getItem("filtroUsuariosPerfil") || "",
+    status: sessionStorage.getItem("filtroUsuariosStatus") || ""
+  };
 
-  const linhas = cache.usuarios.map((usuario) => {
-    const ehUsuarioAtual = usuario.id === usuarioAtual.uid;
-    const toggle = ehUsuarioAtual
-      ? `<button class="botao botao-neutro botao-pequeno" disabled>Usuário atual</button>`
-      : botaoToggle("usuario", usuario.id, usuario.ativo);
-    return `
-      <tr>
-        <td>${protegerTexto(usuario.nome)}</td>
-        <td>${protegerTexto(usuario.email)}</td>
-        <td><span class="badge badge-info">${protegerTexto(textoPerfil(usuario.tipo))}</span></td>
-        <td>${usuario.cursoId ? protegerTexto(nomeCurso(usuario.cursoId)) : "-"}</td>
-        <td>${badgeAtivo(usuario.ativo)}</td>
-        <td><div class="acoes">${botaoEditar("usuario", usuario.id)}${toggle}</div></td>
-      </tr>
-    `;
-  });
+  const totalUsuarios = cache.usuarios.length;
+  const totalCoordenadores = cache.usuarios.filter((usuario) => usuario.tipo === TIPOS_USUARIO.COORDENADOR).length;
+  const totalProfessores = cache.usuarios.filter((usuario) => usuario.tipo === TIPOS_USUARIO.PROFESSOR).length;
+  const totalAlunos = cache.usuarios.filter((usuario) => usuario.tipo === TIPOS_USUARIO.ALUNO).length;
 
   conteudo().innerHTML = `
-    <section class="bloco ${usuarioEdicao ? "form-edicao" : ""}">
+    <section class="bloco">
       <div class="aviso">
-        ${usuarioEdicao
-          ? "A edição altera os dados do perfil no Firestore. E-mail e senha do Firebase Authentication não são alterados por esta tela."
-          : "Para criar professores e alunos, o sistema cria também uma conta no Firebase Authentication. Use uma senha inicial simples e peça ao usuário para trocar depois no painel do Firebase ou em uma versão futura do sistema."}
+        Para criar professores e alunos, o sistema cria também uma conta no Firebase Authentication. Use uma senha inicial simples e peça ao usuário para trocar depois no painel do Firebase ou em uma versão futura do sistema.
       </div>
-      <div class="bloco-topo">
-        <div>
-          <h2>${usuarioEdicao ? "Editar usuário" : "Novo usuário"}</h2>
-          <p>${usuarioEdicao ? "Altere nome, perfil, matrícula, curso e status." : "Cadastre coordenadores, professores e alunos."}</p>
-        </div>
-        ${usuarioEdicao ? `<button id="cancelar-edicao-usuario" class="botao botao-neutro" type="button">Cancelar edição</button>` : ""}
-      </div>
+      <h2>Novo usuário</h2>
       <form id="form-usuario" class="form-grid">
         <div>
           <label>Nome completo</label>
-          <input name="nome" required placeholder="Nome do usuário" value="${protegerTexto(usuarioEdicao?.nome || "")}" />
+          <input name="nome" required placeholder="Nome do usuário" />
         </div>
         <div>
           <label>E-mail</label>
-          <input name="email" type="email" required placeholder="email@exemplo.com" value="${protegerTexto(usuarioEdicao?.email || "")}" ${usuarioEdicao ? "readonly" : ""} />
+          <input name="email" type="email" required placeholder="email@exemplo.com" />
         </div>
-        ${usuarioEdicao ? "" : `
-          <div>
-            <label>Senha inicial</label>
-            <div class="campo-senha">
-              <input id="senha-inicial-usuario" name="senha" type="password" minlength="6" required placeholder="Mínimo 6 caracteres" />
-              <button class="botao-olho" type="button" data-alternar-senha="senha-inicial-usuario" aria-label="Mostrar senha" title="Mostrar senha">👁</button>
-            </div>
-          </div>
-        `}
+        <div>
+          <label>Senha inicial</label>
+          <input name="senha" type="password" minlength="6" required placeholder="Mínimo 6 caracteres" />
+        </div>
         <div>
           <label>Perfil</label>
           <select name="tipo" id="tipo-usuario" required>
-            <option value="coordenador" ${usuarioEdicao?.tipo === "coordenador" ? "selected" : ""}>Coordenador</option>
-            <option value="professor" ${usuarioEdicao?.tipo === "professor" ? "selected" : ""}>Professor</option>
-            <option value="aluno" ${usuarioEdicao?.tipo === "aluno" ? "selected" : ""}>Aluno</option>
+            <option value="coordenador">Coordenador</option>
+            <option value="professor">Professor</option>
+            <option value="aluno">Aluno</option>
           </select>
         </div>
         <div>
           <label>Matrícula</label>
-          <input name="matricula" placeholder="Opcional" value="${protegerTexto(usuarioEdicao?.matricula || "")}" />
+          <input name="matricula" placeholder="Opcional" />
         </div>
         <div id="campo-curso-aluno">
           <label>Curso do aluno</label>
           <select name="cursoId" id="curso-usuario"></select>
         </div>
-        ${usuarioEdicao ? `
-          <div>
-            <label>Status</label>
-            <select name="ativo" ${usuarioEdicao.id === usuarioAtual.uid ? "disabled" : ""}>
-              <option value="true" ${usuarioEdicao.ativo !== false ? "selected" : ""}>Ativo</option>
-              <option value="false" ${usuarioEdicao.ativo === false ? "selected" : ""}>Inativo</option>
-            </select>
-          </div>
-        ` : ""}
-        <button class="botao botao-primario" type="submit">${usuarioEdicao ? "Salvar alterações" : "Criar usuário"}</button>
+        <button class="botao botao-primario" type="submit">Criar usuário</button>
       </form>
     </section>
+
+    <section class="grid-cards grid-cards-pequeno">
+      <div class="card"><strong>${totalUsuarios}</strong><span>Total de usuários</span><p>Todos os perfis cadastrados.</p></div>
+      <div class="card"><strong>${totalCoordenadores}</strong><span>Coordenadores</span><p>Acesso administrativo.</p></div>
+      <div class="card"><strong>${totalProfessores}</strong><span>Professores</span><p>Responsáveis por disciplinas.</p></div>
+      <div class="card"><strong>${totalAlunos}</strong><span>Alunos</span><p>Vinculados aos cursos.</p></div>
+    </section>
+
     <section class="bloco">
-      <h2>Usuários cadastrados</h2>
-      ${montarTabela(["Nome", "E-mail", "Perfil", "Curso", "Status", "Ações"], linhas)}
+      <div class="bloco-topo bloco-topo-responsivo">
+        <div>
+          <h2>Usuários cadastrados</h2>
+          <p id="contador-usuarios">Mostrando 0 usuário(s).</p>
+        </div>
+      </div>
+
+      <div class="form-grid filtros-lista">
+        <div>
+          <label>Pesquisar</label>
+          <input id="busca-usuarios" placeholder="Buscar por nome, e-mail ou matrícula" value="${protegerTexto(filtrosIniciais.busca)}" />
+        </div>
+        <div>
+          <label>Perfil</label>
+          <select id="filtro-perfil-usuarios">
+            <option value="">Todos os perfis</option>
+            <option value="coordenador">Coordenador</option>
+            <option value="professor">Professor</option>
+            <option value="aluno">Aluno</option>
+          </select>
+        </div>
+        <div>
+          <label>Status</label>
+          <select id="filtro-status-usuarios">
+            <option value="">Todos os status</option>
+            <option value="ativo">Ativos</option>
+            <option value="inativo">Inativos</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="tabela-responsiva tabela-com-margem">
+        <table>
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>E-mail</th>
+              <th>Perfil</th>
+              <th>Curso</th>
+              <th>Matrícula</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="tabela-usuarios-corpo"></tbody>
+        </table>
+      </div>
     </section>
   `;
 
-  preencherSelect($("#curso-usuario"), cache.cursos.filter((curso) => curso.ativo !== false), "Selecione o curso", "id", "nome");
-  if (usuarioEdicao?.cursoId) $("#curso-usuario").value = usuarioEdicao.cursoId;
+  preencherSelect($("#curso-usuario"), cache.cursos, "Selecione o curso", "id", "nome");
+  $("#filtro-perfil-usuarios").value = filtrosIniciais.perfil;
+  $("#filtro-status-usuarios").value = filtrosIniciais.status;
 
   function atualizarCampoCurso() {
     const tipo = $("#tipo-usuario").value;
     $("#campo-curso-aluno").style.display = tipo === TIPOS_USUARIO.ALUNO ? "block" : "none";
   }
 
-  $("#tipo-usuario").addEventListener("change", atualizarCampoCurso);
-  atualizarCampoCurso();
+  function obterUsuariosFiltrados() {
+    const busca = $("#busca-usuarios").value.trim().toLowerCase();
+    const perfil = $("#filtro-perfil-usuarios").value;
+    const status = $("#filtro-status-usuarios").value;
 
-  $$('[data-alternar-senha]').forEach((botao) => {
-    botao.addEventListener("click", () => alternarVisibilidadeSenha(botao));
-  });
+    sessionStorage.setItem("filtroUsuariosBusca", $("#busca-usuarios").value);
+    sessionStorage.setItem("filtroUsuariosPerfil", perfil);
+    sessionStorage.setItem("filtroUsuariosStatus", status);
 
-  if (usuarioEdicao) {
-    $("#cancelar-edicao-usuario").addEventListener("click", () => limparEdicao("editarUsuarioId", renderUsuarios));
+    return cache.usuarios.filter((usuario) => {
+      const textoBusca = [usuario.nome, usuario.email, usuario.matricula, nomeCurso(usuario.cursoId)]
+        .join(" ")
+        .toLowerCase();
+      const combinaBusca = !busca || textoBusca.includes(busca);
+      const combinaPerfil = !perfil || usuario.tipo === perfil;
+      const usuarioAtivo = usuario.ativo !== false;
+      const combinaStatus = !status || (status === "ativo" ? usuarioAtivo : !usuarioAtivo);
+      return combinaBusca && combinaPerfil && combinaStatus;
+    });
   }
 
-  $$('[data-editar-usuario]').forEach((botao) => botao.addEventListener("click", async () => {
-    sessionStorage.setItem("editarUsuarioId", botao.dataset.editarUsuario);
-    await renderUsuarios();
-  }));
+  function atualizarTabelaUsuarios() {
+    const usuariosFiltrados = obterUsuariosFiltrados();
+    const corpo = $("#tabela-usuarios-corpo");
+    $("#contador-usuarios").textContent = `Mostrando ${usuariosFiltrados.length} de ${totalUsuarios} usuário(s).`;
 
-  $$('[data-toggle-usuario]').forEach((botao) => botao.addEventListener("click", async () => {
-    const usuario = cache.usuarios.find((item) => item.id === botao.dataset.toggleUsuario);
-    if (!usuario || usuario.id === usuarioAtual.uid) return;
-    await updateDoc(doc(db, COLECOES.usuarios, usuario.id), {
-      ativo: usuario.ativo === false,
-      atualizadoEm: serverTimestamp(),
-      atualizadoPor: usuarioAtual.uid
-    });
-    mostrarMensagem(usuario.ativo === false ? "Usuário reativado." : "Usuário inativado.");
-    await renderUsuarios();
-  }));
+    if (usuariosFiltrados.length === 0) {
+      corpo.innerHTML = `
+        <tr>
+          <td colspan="6">
+            <div class="estado-vazio estado-vazio-tabela">
+              <strong>Nenhum usuário encontrado.</strong>
+              <p>Tente mudar o texto da pesquisa, o perfil ou o status.</p>
+            </div>
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    corpo.innerHTML = usuariosFiltrados.map((usuario) => `
+      <tr>
+        <td>${protegerTexto(usuario.nome)}</td>
+        <td>${protegerTexto(usuario.email)}</td>
+        <td><span class="badge badge-info">${protegerTexto(textoPerfil(usuario.tipo))}</span></td>
+        <td>${usuario.cursoId ? protegerTexto(nomeCurso(usuario.cursoId)) : "-"}</td>
+        <td>${usuario.matricula ? protegerTexto(usuario.matricula) : "-"}</td>
+        <td><span class="badge ${usuario.ativo === false ? "badge-muted" : "badge-success"}">${usuario.ativo === false ? "Inativo" : "Ativo"}</span></td>
+      </tr>
+    `).join("");
+  }
+
+  $("#tipo-usuario").addEventListener("change", atualizarCampoCurso);
+  $("#busca-usuarios").addEventListener("input", atualizarTabelaUsuarios);
+  $("#filtro-perfil-usuarios").addEventListener("change", atualizarTabelaUsuarios);
+  $("#filtro-status-usuarios").addEventListener("change", atualizarTabelaUsuarios);
+  atualizarCampoCurso();
+  atualizarTabelaUsuarios();
 
   $("#form-usuario").addEventListener("submit", async (evento) => {
     evento.preventDefault();
     const botao = evento.submitter;
     botao.disabled = true;
-    botao.textContent = usuarioEdicao ? "Salvando..." : "Criando...";
+    botao.textContent = "Criando...";
 
     try {
       const dados = new FormData(evento.target);
-      const tipo = dados.get("tipo");
-      const cursoId = tipo === TIPOS_USUARIO.ALUNO ? dados.get("cursoId") : "";
+      const perfil = {
+        nome: dados.get("nome").trim(),
+        email: dados.get("email").trim().toLowerCase(),
+        tipo: dados.get("tipo"),
+        matricula: dados.get("matricula").trim(),
+        cursoId: dados.get("tipo") === TIPOS_USUARIO.ALUNO ? dados.get("cursoId") : "",
+        ativo: true,
+        criadoEm: serverTimestamp(),
+        criadoPor: usuarioAtual.uid
+      };
 
-      if (tipo === TIPOS_USUARIO.ALUNO && !cursoId) {
+      if (perfil.tipo === TIPOS_USUARIO.ALUNO && !perfil.cursoId) {
         mostrarMensagem("Selecione o curso do aluno.", "alerta");
         return;
       }
 
-      if (usuarioEdicao) {
-        await updateDoc(doc(db, COLECOES.usuarios, usuarioEdicao.id), {
-          nome: dados.get("nome").trim(),
-          tipo,
-          matricula: dados.get("matricula").trim(),
-          cursoId,
-          ativo: usuarioEdicao.id === usuarioAtual.uid ? true : dados.get("ativo") === "true",
-          atualizadoEm: serverTimestamp(),
-          atualizadoPor: usuarioAtual.uid
-        });
-        sessionStorage.removeItem("editarUsuarioId");
-        mostrarMensagem("Usuário atualizado com sucesso.");
-      } else {
-        const perfil = {
-          nome: dados.get("nome").trim(),
-          email: dados.get("email").trim().toLowerCase(),
-          tipo,
-          matricula: dados.get("matricula").trim(),
-          cursoId,
-          ativo: true,
-          criadoEm: serverTimestamp(),
-          criadoPor: usuarioAtual.uid
-        };
-        await criarUsuarioComAuth(perfil, dados.get("senha"));
-        mostrarMensagem("Usuário criado com sucesso.");
-      }
+      await criarUsuarioComAuth(perfil, dados.get("senha"));
+      mostrarMensagem("Usuário criado com sucesso.");
       await renderUsuarios();
     } catch (erro) {
       console.error(erro);
-      mostrarMensagem(usuarioEdicao ? "Erro ao atualizar usuário." : "Erro ao criar usuário. Verifique se o e-mail já existe.", "erro");
+      mostrarMensagem("Erro ao criar usuário. Verifique se o e-mail já existe.", "erro");
     } finally {
       botao.disabled = false;
-      botao.textContent = usuarioEdicao ? "Salvar alterações" : "Criar usuário";
+      botao.textContent = "Criar usuário";
     }
   });
 }
@@ -770,18 +680,12 @@ async function renderMatriz() {
   mostrarCarregando(conteudo());
   await carregarBaseAcademica();
 
-  const matrizEdicaoId = sessionStorage.getItem("editarMatrizId");
-  const matrizEdicao = matrizEdicaoId ? cache.disciplinasCurso.find((item) => item.id === matrizEdicaoId) : null;
-  if (matrizEdicaoId && !matrizEdicao) sessionStorage.removeItem("editarMatrizId");
-
   const linhasMatriz = cache.disciplinasCurso.map((item) => `
     <tr>
       <td>${protegerTexto(nomeCurso(item.cursoId))}</td>
       <td>${protegerTexto(nomeDisciplina(item.disciplinaId))}</td>
       <td>${protegerTexto(item.periodo || "-")}</td>
       <td>${protegerTexto(item.ordem || "-")}</td>
-      <td>${badgeAtivo(item.ativo)}</td>
-      <td><div class="acoes">${botaoEditar("matriz", item.id)}${botaoToggle("matriz", item.id, item.ativo)}</div></td>
     </tr>
   `);
 
@@ -792,20 +696,13 @@ async function renderMatriz() {
       <tr>
         <td>${protegerTexto(resumoDisciplinaCurso(disciplina))}</td>
         <td>${protegerTexto(resumoDisciplinaCurso(dependeDe))}</td>
-        <td><div class="acoes">${botaoRemover("dependencia", dep.id)}</div></td>
       </tr>
     `;
   });
 
   conteudo().innerHTML = `
-    <section class="bloco ${matrizEdicao ? "form-edicao" : ""}">
-      <div class="bloco-topo">
-        <div>
-          <h2>${matrizEdicao ? "Editar disciplina na matriz" : "Vincular disciplina ao curso"}</h2>
-          <p>${matrizEdicao ? "Atualize período, ordem, curso, disciplina ou status." : "Monte a matriz curricular antes de criar as ofertas."}</p>
-        </div>
-        ${matrizEdicao ? `<button id="cancelar-edicao-matriz" class="botao botao-neutro" type="button">Cancelar edição</button>` : ""}
-      </div>
+    <section class="bloco">
+      <h2>Vincular disciplina ao curso</h2>
       <form id="form-matriz" class="form-grid">
         <div>
           <label>Curso</label>
@@ -817,22 +714,13 @@ async function renderMatriz() {
         </div>
         <div>
           <label>Período/Módulo</label>
-          <input name="periodo" type="number" min="1" required placeholder="1" value="${protegerTexto(matrizEdicao?.periodo || "")}" />
+          <input name="periodo" type="number" min="1" required placeholder="1" />
         </div>
         <div>
           <label>Ordem</label>
-          <input name="ordem" type="number" min="1" required placeholder="1" value="${protegerTexto(matrizEdicao?.ordem || "")}" />
+          <input name="ordem" type="number" min="1" required placeholder="1" />
         </div>
-        ${matrizEdicao ? `
-          <div>
-            <label>Status</label>
-            <select name="ativo">
-              <option value="true" ${matrizEdicao.ativo !== false ? "selected" : ""}>Ativo</option>
-              <option value="false" ${matrizEdicao.ativo === false ? "selected" : ""}>Inativo</option>
-            </select>
-          </div>
-        ` : ""}
-        <button class="botao botao-primario" type="submit">${matrizEdicao ? "Salvar alterações" : "Adicionar à matriz"}</button>
+        <button class="botao botao-primario" type="submit">Adicionar à matriz</button>
       </form>
     </section>
 
@@ -853,85 +741,39 @@ async function renderMatriz() {
 
     <section class="bloco">
       <h2>Disciplinas na matriz</h2>
-      ${montarTabela(["Curso", "Disciplina", "Período", "Ordem", "Status", "Ações"], linhasMatriz)}
+      ${montarTabela(["Curso", "Disciplina", "Período", "Ordem"], linhasMatriz)}
     </section>
 
     <section class="bloco">
       <h2>Dependências cadastradas</h2>
-      ${montarTabela(["Disciplina", "Depende de", "Ações"], linhasDependencias)}
+      ${montarTabela(["Disciplina", "Depende de"], linhasDependencias)}
     </section>
   `;
 
-  preencherSelect($("#matriz-curso"), cache.cursos.filter((curso) => curso.ativo !== false || curso.id === matrizEdicao?.cursoId), "Selecione o curso", "id", "nome");
-  preencherSelect($("#matriz-disciplina"), cache.disciplinas.filter((disciplina) => disciplina.ativo !== false || disciplina.id === matrizEdicao?.disciplinaId), "Selecione a disciplina", "id", "nome");
-  if (matrizEdicao) {
-    $("#matriz-curso").value = matrizEdicao.cursoId;
-    $("#matriz-disciplina").value = matrizEdicao.disciplinaId;
-    $("#cancelar-edicao-matriz").addEventListener("click", () => limparEdicao("editarMatrizId", renderMatriz));
-  }
+  preencherSelect($("#matriz-curso"), cache.cursos, "Selecione o curso", "id", "nome");
+  preencherSelect($("#matriz-disciplina"), cache.disciplinas, "Selecione a disciplina", "id", "nome");
 
-  const opcoesMatriz = cache.disciplinasCurso
-    .filter((item) => item.ativo !== false)
-    .map((item) => ({ id: item.id, nome: resumoDisciplinaCurso(item) }));
+  const opcoesMatriz = cache.disciplinasCurso.map((item) => ({ id: item.id, nome: resumoDisciplinaCurso(item) }));
   preencherSelect($("#dep-disciplina"), opcoesMatriz, "Selecione a disciplina", "id", "nome");
   preencherSelect($("#dep-depende"), opcoesMatriz, "Selecione o pré-requisito", "id", "nome");
-
-  $$('[data-editar-matriz]').forEach((botao) => botao.addEventListener("click", async () => {
-    sessionStorage.setItem("editarMatrizId", botao.dataset.editarMatriz);
-    await renderMatriz();
-  }));
-
-  $$('[data-toggle-matriz]').forEach((botao) => botao.addEventListener("click", async () => {
-    const item = cache.disciplinasCurso.find((matriz) => matriz.id === botao.dataset.toggleMatriz);
-    if (!item) return;
-    await updateDoc(doc(db, COLECOES.disciplinasCurso, item.id), {
-      ativo: item.ativo === false,
-      atualizadoEm: serverTimestamp(),
-      atualizadoPor: usuarioAtual.uid
-    });
-    mostrarMensagem(item.ativo === false ? "Item da matriz reativado." : "Item da matriz inativado.");
-    await renderMatriz();
-  }));
-
-  $$('[data-remover-dependencia]').forEach((botao) => botao.addEventListener("click", async () => {
-    if (!confirm("Remover esta dependência?")) return;
-    await deleteDoc(doc(db, COLECOES.dependencias, botao.dataset.removerDependencia));
-    mostrarMensagem("Dependência removida.");
-    await renderMatriz();
-  }));
 
   $("#form-matriz").addEventListener("submit", async (evento) => {
     evento.preventDefault();
     const dados = new FormData(evento.target);
-    const cursoId = dados.get("cursoId");
-    const disciplinaId = dados.get("disciplinaId");
-    const jaExiste = cache.disciplinasCurso.some((item) => item.id !== matrizEdicao?.id && item.cursoId === cursoId && item.disciplinaId === disciplinaId);
+    const jaExiste = cache.disciplinasCurso.some((item) => item.cursoId === dados.get("cursoId") && item.disciplinaId === dados.get("disciplinaId"));
     if (jaExiste) {
       mostrarMensagem("Essa disciplina já está vinculada a este curso.", "alerta");
       return;
     }
-
-    const payload = {
-      cursoId,
-      disciplinaId,
+    await addDoc(collection(db, COLECOES.disciplinasCurso), {
+      cursoId: dados.get("cursoId"),
+      disciplinaId: dados.get("disciplinaId"),
       periodo: Number(dados.get("periodo")),
       ordem: Number(dados.get("ordem")),
-      ativo: matrizEdicao ? dados.get("ativo") === "true" : true,
-      atualizadoEm: serverTimestamp(),
-      atualizadoPor: usuarioAtual.uid
-    };
-
-    if (matrizEdicao) {
-      await updateDoc(doc(db, COLECOES.disciplinasCurso, matrizEdicao.id), payload);
-      sessionStorage.removeItem("editarMatrizId");
-      mostrarMensagem("Item da matriz atualizado.");
-    } else {
-      await addDoc(collection(db, COLECOES.disciplinasCurso), {
-        ...payload,
-        criadoEm: serverTimestamp()
-      });
-      mostrarMensagem("Disciplina adicionada à matriz.");
-    }
+      ativo: true,
+      criadoEm: serverTimestamp()
+    });
+    mostrarMensagem("Disciplina adicionada à matriz.");
     await renderMatriz();
   });
 
@@ -955,8 +797,7 @@ async function renderMatriz() {
     await addDoc(collection(db, COLECOES.dependencias), {
       disciplinaCursoId,
       dependeDeDisciplinaCursoId,
-      criadoEm: serverTimestamp(),
-      criadoPor: usuarioAtual.uid
+      criadoEm: serverTimestamp()
     });
     mostrarMensagem("Dependência cadastrada.");
     await renderMatriz();
@@ -968,14 +809,8 @@ async function renderOfertas() {
   mostrarCarregando(conteudo());
   await carregarBaseAcademica();
 
-  const ofertaEdicaoId = sessionStorage.getItem("editarOfertaId");
-  const ofertaEdicao = ofertaEdicaoId ? cache.ofertas.find((oferta) => oferta.id === ofertaEdicaoId) : null;
-  if (ofertaEdicaoId && !ofertaEdicao) sessionStorage.removeItem("editarOfertaId");
-
   const professores = cache.usuarios.filter((usuario) => usuario.tipo === TIPOS_USUARIO.PROFESSOR && usuario.ativo !== false);
-  const opcoesMatriz = cache.disciplinasCurso
-    .filter((item) => item.ativo !== false || item.id === ofertaEdicao?.disciplinaCursoId)
-    .map((item) => ({ id: item.id, nome: resumoDisciplinaCurso(item) }));
+  const opcoesMatriz = cache.disciplinasCurso.map((item) => ({ id: item.id, nome: resumoDisciplinaCurso(item) }));
 
   const linhas = cache.ofertas.map((oferta) => `
     <tr>
@@ -985,20 +820,13 @@ async function renderOfertas() {
       <td>${protegerTexto(oferta.periodoLetivo || "-")}</td>
       <td>${protegerTexto(professorDaOferta(oferta))}</td>
       <td>${formatarNumero(minimoFrequenciaOferta(oferta))}%</td>
-      <td>${badgeAtivo(oferta.ativa, "Ativa", "Inativa")}</td>
-      <td><div class="acoes">${botaoEditar("oferta", oferta.id)}${botaoToggle("oferta", oferta.id, oferta.ativa)}</div></td>
+      <td><span class="badge ${oferta.ativa === false ? "badge-muted" : "badge-success"}">${oferta.ativa === false ? "Inativa" : "Ativa"}</span></td>
     </tr>
   `);
 
   conteudo().innerHTML = `
-    <section class="bloco ${ofertaEdicao ? "form-edicao" : ""}">
-      <div class="bloco-topo">
-        <div>
-          <h2>${ofertaEdicao ? "Editar oferta" : "Nova oferta"}</h2>
-          <p>${ofertaEdicao ? "Altere professor, turma, período, frequência mínima ou status." : "Crie uma turma/oferta a partir da matriz curricular."}</p>
-        </div>
-        ${ofertaEdicao ? `<button id="cancelar-edicao-oferta" class="botao botao-neutro" type="button">Cancelar edição</button>` : ""}
-      </div>
+    <section class="bloco">
+      <h2>Nova oferta</h2>
       <form id="form-oferta" class="form-grid">
         <div>
           <label>Disciplina na matriz</label>
@@ -1010,58 +838,27 @@ async function renderOfertas() {
         </div>
         <div>
           <label>Período letivo</label>
-          <input name="periodoLetivo" required placeholder="Ex.: 2026.2" value="${protegerTexto(ofertaEdicao?.periodoLetivo || "")}" />
+          <input name="periodoLetivo" required placeholder="Ex.: 2026.2" />
         </div>
         <div>
           <label>Turma</label>
-          <input name="turma" required placeholder="Ex.: Módulo III - Noite" value="${protegerTexto(ofertaEdicao?.turma || "")}" />
+          <input name="turma" required placeholder="Ex.: Módulo III - Noite" />
         </div>
         <div>
           <label>Frequência mínima obrigatória (%)</label>
-          <input name="frequenciaMinima" type="number" min="1" max="100" value="${protegerTexto(ofertaEdicao?.frequenciaMinima || 75)}" />
+          <input name="frequenciaMinima" type="number" min="1" max="100" value="75" />
         </div>
-        ${ofertaEdicao ? `
-          <div>
-            <label>Status</label>
-            <select name="ativa">
-              <option value="true" ${ofertaEdicao.ativa !== false ? "selected" : ""}>Ativa</option>
-              <option value="false" ${ofertaEdicao.ativa === false ? "selected" : ""}>Inativa</option>
-            </select>
-          </div>
-        ` : ""}
-        <button class="botao botao-primario" type="submit">${ofertaEdicao ? "Salvar alterações" : "Criar oferta"}</button>
+        <button class="botao botao-primario" type="submit">Criar oferta</button>
       </form>
     </section>
     <section class="bloco">
       <h2>Ofertas cadastradas</h2>
-      ${montarTabela(["Curso", "Disciplina", "Turma", "Período", "Professor", "Frequência mínima", "Status", "Ações"], linhas)}
+      ${montarTabela(["Curso", "Disciplina", "Turma", "Período", "Professor", "Frequência mínima", "Status"], linhas)}
     </section>
   `;
 
   preencherSelect($("#oferta-disciplina-curso"), opcoesMatriz, "Selecione a disciplina", "id", "nome");
   preencherSelect($("#oferta-professor"), professores, "Selecione o professor", "id", "nome");
-  if (ofertaEdicao) {
-    $("#oferta-disciplina-curso").value = ofertaEdicao.disciplinaCursoId;
-    $("#oferta-professor").value = ofertaEdicao.professorId;
-    $("#cancelar-edicao-oferta").addEventListener("click", () => limparEdicao("editarOfertaId", renderOfertas));
-  }
-
-  $$('[data-editar-oferta]').forEach((botao) => botao.addEventListener("click", async () => {
-    sessionStorage.setItem("editarOfertaId", botao.dataset.editarOferta);
-    await renderOfertas();
-  }));
-
-  $$('[data-toggle-oferta]').forEach((botao) => botao.addEventListener("click", async () => {
-    const oferta = cache.ofertas.find((item) => item.id === botao.dataset.toggleOferta);
-    if (!oferta) return;
-    await updateDoc(doc(db, COLECOES.ofertas, oferta.id), {
-      ativa: oferta.ativa === false,
-      atualizadoEm: serverTimestamp(),
-      atualizadoPor: usuarioAtual.uid
-    });
-    mostrarMensagem(oferta.ativa === false ? "Oferta reativada." : "Oferta inativada.");
-    await renderOfertas();
-  }));
 
   $("#form-oferta").addEventListener("submit", async (evento) => {
     evento.preventDefault();
@@ -1073,7 +870,7 @@ async function renderOfertas() {
       return;
     }
 
-    const payload = {
+    await addDoc(collection(db, COLECOES.ofertas), {
       cursoId: disciplinaCurso.cursoId,
       disciplinaCursoId: disciplinaCurso.id,
       disciplinaId: disciplinaCurso.disciplinaId,
@@ -1081,39 +878,33 @@ async function renderOfertas() {
       periodoLetivo: dados.get("periodoLetivo").trim(),
       turma: dados.get("turma").trim(),
       frequenciaMinima: Number(dados.get("frequenciaMinima") || 75),
-      ativa: ofertaEdicao ? dados.get("ativa") === "true" : true,
-      atualizadoEm: serverTimestamp(),
-      atualizadoPor: usuarioAtual.uid
-    };
+      ativa: true,
+      criadoEm: serverTimestamp()
+    });
 
-    if (ofertaEdicao) {
-      await updateDoc(doc(db, COLECOES.ofertas, ofertaEdicao.id), payload);
-      sessionStorage.removeItem("editarOfertaId");
-      mostrarMensagem("Oferta atualizada com sucesso.");
-    } else {
-      await addDoc(collection(db, COLECOES.ofertas), {
-        ...payload,
-        criadoEm: serverTimestamp()
-      });
-      mostrarMensagem("Oferta criada com sucesso.");
-    }
-
+    mostrarMensagem("Oferta criada com sucesso.");
     await renderOfertas();
   });
 }
 
 async function renderMatriculas() {
-  definirTitulo("Matrículas e importação", "Matricule alunos, edite situação e importe de uma disciplina para outra.");
+  definirTitulo("Matrículas e importação", "Matricule alunos, importe de outra disciplina e acompanhe os totais.");
   mostrarCarregando(conteudo());
   await carregarBaseAcademica();
+
   const alunos = cache.usuarios.filter((usuario) => usuario.tipo === TIPOS_USUARIO.ALUNO && usuario.ativo !== false);
   const ofertas = cache.ofertas.filter((oferta) => oferta.ativa !== false);
   const ofertaSelecionadaId = sessionStorage.getItem("ofertaMatriculas") || ofertas[0]?.id || "";
-  const matriculasOferta = ofertaSelecionadaId ? await buscarPorCampo(COLECOES.matriculas, "ofertaId", "==", ofertaSelecionadaId) : [];
-
-  const matriculaEdicaoId = sessionStorage.getItem("editarMatriculaId");
-  const matriculaEdicao = matriculaEdicaoId ? matriculasOferta.find((matricula) => matricula.id === matriculaEdicaoId) : null;
-  if (matriculaEdicaoId && !matriculaEdicao) sessionStorage.removeItem("editarMatriculaId");
+  const todasMatriculas = await buscarTodos(COLECOES.matriculas);
+  const matriculasOferta = ofertaSelecionadaId ? todasMatriculas.filter((matricula) => matricula.ofertaId === ofertaSelecionadaId) : [];
+  const alunosUnicosMatriculados = new Set(todasMatriculas.map((matricula) => matricula.alunoId)).size;
+  const ofertaSelecionada = ofertas.find((oferta) => oferta.id === ofertaSelecionadaId);
+  const totalCursando = matriculasOferta.filter((matricula) => matricula.situacao === SITUACOES.CURSANDO).length;
+  const totalAprovados = matriculasOferta.filter((matricula) => matricula.situacao === SITUACOES.APROVADO).length;
+  const totalReprovados = matriculasOferta.filter((matricula) => matricula.situacao === SITUACOES.REPROVADO).length;
+  const totalOutros = matriculasOferta.length - totalCursando - totalAprovados - totalReprovados;
+  const somaMedias = matriculasOferta.reduce((total, matricula) => total + Number(matricula.mediaFinal || 0), 0);
+  const mediaTurma = matriculasOferta.length ? somaMedias / matriculasOferta.length : 0;
 
   const linhas = matriculasOferta.map((matricula) => `
     <tr>
@@ -1121,41 +912,29 @@ async function renderMatriculas() {
       <td><span class="badge ${classeSituacao(matricula.situacao)}">${protegerTexto(textoSituacao(matricula.situacao))}</span></td>
       <td>${formatarNumero(matricula.mediaFinal || 0)}</td>
       <td>${formatarNumero(matricula.percentualAproveitamento || 0)}%</td>
-      <td><div class="acoes">${botaoEditar("matricula", matricula.id)}${botaoRemover("matricula", matricula.id, "Remover")}</div></td>
     </tr>
   `);
 
   conteudo().innerHTML = `
-    <section class="bloco ${matriculaEdicao ? "form-edicao" : ""}">
-      <div class="bloco-topo">
-        <div>
-          <h2>${matriculaEdicao ? "Editar matrícula" : "Matricular aluno manualmente"}</h2>
-          <p>${matriculaEdicao ? "Atualize a situação do aluno nesta oferta." : "Vincule um aluno a uma oferta de disciplina."}</p>
-        </div>
-        ${matriculaEdicao ? `<button id="cancelar-edicao-matricula" class="botao botao-neutro" type="button">Cancelar edição</button>` : ""}
-      </div>
+    <section class="grid-cards grid-cards-pequeno">
+      <div class="card"><strong>${ofertas.length}</strong><span>Ofertas ativas</span><p>Disciplinas disponíveis para matrícula.</p></div>
+      <div class="card"><strong>${alunos.length}</strong><span>Alunos ativos</span><p>Alunos disponíveis para matrícula.</p></div>
+      <div class="card"><strong>${todasMatriculas.length}</strong><span>Total de matrículas</span><p>Quantidade geral no sistema.</p></div>
+      <div class="card"><strong>${alunosUnicosMatriculados}</strong><span>Alunos matriculados</span><p>Alunos únicos em alguma oferta.</p></div>
+    </section>
+
+    <section class="bloco">
+      <h2>Matricular aluno manualmente</h2>
       <form id="form-matricula" class="form-grid">
         <div>
           <label>Oferta da disciplina</label>
-          <select name="ofertaId" id="matricula-oferta" required ${matriculaEdicao ? "disabled" : ""}></select>
+          <select name="ofertaId" id="matricula-oferta" required></select>
         </div>
         <div>
           <label>Aluno</label>
-          <select name="alunoId" id="matricula-aluno" required ${matriculaEdicao ? "disabled" : ""}></select>
+          <select name="alunoId" id="matricula-aluno" required></select>
         </div>
-        ${matriculaEdicao ? `
-          <div>
-            <label>Situação</label>
-            <select name="situacao" id="matricula-situacao">
-              <option value="cursando" ${matriculaEdicao.situacao === "cursando" ? "selected" : ""}>Cursando</option>
-              <option value="aprovado" ${matriculaEdicao.situacao === "aprovado" ? "selected" : ""}>Aprovado</option>
-              <option value="reprovado" ${matriculaEdicao.situacao === "reprovado" ? "selected" : ""}>Reprovado</option>
-              <option value="trancado" ${matriculaEdicao.situacao === "trancado" ? "selected" : ""}>Trancado</option>
-              <option value="dependencia" ${matriculaEdicao.situacao === "dependencia" ? "selected" : ""}>Dependência</option>
-            </select>
-          </div>
-        ` : ""}
-        <button class="botao botao-primario" type="submit">${matriculaEdicao ? "Salvar alterações" : "Matricular aluno"}</button>
+        <button class="botao botao-primario" type="submit">Matricular aluno</button>
       </form>
     </section>
 
@@ -1172,24 +951,37 @@ async function renderMatriculas() {
         </div>
         <div>
           <label>Filtro</label>
-          <select name="filtro">
+          <select name="filtro" id="importar-filtro">
             <option value="todos">Importar todos</option>
             <option value="aprovados">Importar somente aprovados</option>
           </select>
+        </div>
+        <div class="linha-inteira resumo-importacao" id="resumo-importacao">
+          Selecione a origem e o destino para ver os totais antes de importar.
         </div>
         <button class="botao botao-primario" type="submit">Importar alunos</button>
       </form>
     </section>
 
     <section class="bloco">
-      <div class="bloco-topo">
+      <div class="bloco-topo bloco-topo-responsivo">
         <div>
           <h2>Alunos matriculados</h2>
-          <p>Selecione uma oferta para visualizar os alunos.</p>
+          <p>${ofertaSelecionada ? protegerTexto(resumoOferta(ofertaSelecionada)) : "Selecione uma oferta para visualizar os alunos."}</p>
         </div>
         <select id="filtro-oferta-matriculas"></select>
       </div>
-      ${montarTabela(["Aluno", "Situação", "Média", "Aproveitamento", "Ações"], linhas)}
+
+      <section class="grid-cards grid-cards-pequeno cards-internos">
+        <div class="card"><strong>${matriculasOferta.length}</strong><span>Nesta oferta</span><p>Total de alunos na disciplina selecionada.</p></div>
+        <div class="card"><strong>${totalCursando}</strong><span>Cursando</span><p>Alunos em andamento.</p></div>
+        <div class="card"><strong>${totalAprovados}</strong><span>Aprovados</span><p>Alunos já aprovados.</p></div>
+        <div class="card"><strong>${totalReprovados}</strong><span>Reprovados</span><p>Alunos reprovados.</p></div>
+        <div class="card"><strong>${totalOutros}</strong><span>Outros status</span><p>Trancado ou dependência.</p></div>
+        <div class="card"><strong>${formatarNumero(mediaTurma)}</strong><span>Média da turma</span><p>Considera as médias já lançadas.</p></div>
+      </section>
+
+      ${montarTabela(["Aluno", "Situação", "Média", "Aproveitamento"], linhas)}
     </section>
   `;
 
@@ -1201,63 +993,55 @@ async function renderMatriculas() {
   preencherSelect($("#filtro-oferta-matriculas"), opcoesOfertas, "Selecione uma oferta", "id", "nome");
 
   $("#filtro-oferta-matriculas").value = ofertaSelecionadaId;
-  $("#matricula-oferta").value = matriculaEdicao?.ofertaId || ofertaSelecionadaId;
-  if (matriculaEdicao?.alunoId) $("#matricula-aluno").value = matriculaEdicao.alunoId;
+  $("#matricula-oferta").value = ofertaSelecionadaId;
+  $("#importar-destino").value = ofertaSelecionadaId;
 
-  if (matriculaEdicao) {
-    $("#cancelar-edicao-matricula").addEventListener("click", () => limparEdicao("editarMatriculaId", renderMatriculas));
+  function quantidadeDaOferta(ofertaId) {
+    return todasMatriculas.filter((matricula) => matricula.ofertaId === ofertaId).length;
+  }
+
+  function quantidadeAprovadosDaOferta(ofertaId) {
+    return todasMatriculas.filter((matricula) => matricula.ofertaId === ofertaId && matricula.situacao === SITUACOES.APROVADO).length;
+  }
+
+  function atualizarResumoImportacao() {
+    const origemId = $("#importar-origem").value;
+    const destinoId = $("#importar-destino").value;
+    const filtro = $("#importar-filtro").value;
+    const totalOrigem = quantidadeDaOferta(origemId);
+    const totalDestino = quantidadeDaOferta(destinoId);
+    const totalAprovadosOrigem = quantidadeAprovadosDaOferta(origemId);
+    const totalConsiderado = filtro === "aprovados" ? totalAprovadosOrigem : totalOrigem;
+
+    if (!origemId || !destinoId) {
+      $("#resumo-importacao").textContent = "Selecione a origem e o destino para ver os totais antes de importar.";
+      return;
+    }
+
+    if (origemId === destinoId) {
+      $("#resumo-importacao").textContent = "A origem e o destino são iguais. Escolha disciplinas diferentes.";
+      return;
+    }
+
+    $("#resumo-importacao").textContent = `Origem: ${totalOrigem} aluno(s). ${filtro === "aprovados" ? `${totalAprovadosOrigem} aprovado(s) serão considerados.` : `${totalConsiderado} aluno(s) serão considerados.`} Destino atual: ${totalDestino} aluno(s).`;
   }
 
   $("#filtro-oferta-matriculas").addEventListener("change", async (evento) => {
     sessionStorage.setItem("ofertaMatriculas", evento.target.value);
-    sessionStorage.removeItem("editarMatriculaId");
     await renderMatriculas();
   });
 
-  $$('[data-editar-matricula]').forEach((botao) => botao.addEventListener("click", async () => {
-    sessionStorage.setItem("editarMatriculaId", botao.dataset.editarMatricula);
-    await renderMatriculas();
-  }));
-
-  $$('[data-remover-matricula]').forEach((botao) => botao.addEventListener("click", async () => {
-    const matricula = matriculasOferta.find((item) => item.id === botao.dataset.removerMatricula);
-    if (!matricula) return;
-    if (!confirm("Remover esta matrícula? As notas e frequências vinculadas também serão removidas.")) return;
-
-    const lote = writeBatch(db);
-    lote.delete(doc(db, COLECOES.matriculas, matricula.id));
-    lote.delete(doc(db, COLECOES.notas, matricula.id));
-    const frequenciasMatricula = await buscarPorCampo(COLECOES.frequencias, "matriculaId", "==", matricula.id);
-    frequenciasMatricula.forEach((freq) => lote.delete(doc(db, COLECOES.frequencias, freq.id)));
-    await lote.commit();
-
-    mostrarMensagem("Matrícula removida.");
-    await renderMatriculas();
-  }));
+  $("#importar-origem").addEventListener("change", atualizarResumoImportacao);
+  $("#importar-destino").addEventListener("change", atualizarResumoImportacao);
+  $("#importar-filtro").addEventListener("change", atualizarResumoImportacao);
+  atualizarResumoImportacao();
 
   $("#form-matricula").addEventListener("submit", async (evento) => {
     evento.preventDefault();
     const dados = new FormData(evento.target);
-
-    if (matriculaEdicao) {
-      const situacao = dados.get("situacao") || SITUACOES.CURSANDO;
-      await updateDoc(doc(db, COLECOES.matriculas, matriculaEdicao.id), {
-        situacao,
-        atualizadoEm: serverTimestamp(),
-        atualizadoPor: usuarioAtual.uid
-      });
-      await updateDoc(doc(db, COLECOES.notas, matriculaEdicao.id), {
-        situacao,
-        atualizadoEm: serverTimestamp(),
-        atualizadoPor: usuarioAtual.uid
-      }).catch(() => {});
-      sessionStorage.removeItem("editarMatriculaId");
-      mostrarMensagem("Matrícula atualizada com sucesso.");
-    } else {
-      await matricularAluno(dados.get("alunoId"), dados.get("ofertaId"));
-      sessionStorage.setItem("ofertaMatriculas", dados.get("ofertaId"));
-      mostrarMensagem("Aluno matriculado com sucesso.");
-    }
+    await matricularAluno(dados.get("alunoId"), dados.get("ofertaId"));
+    sessionStorage.setItem("ofertaMatriculas", dados.get("ofertaId"));
+    mostrarMensagem("Aluno matriculado com sucesso.");
     await renderMatriculas();
   });
 
@@ -1273,9 +1057,9 @@ async function renderMatriculas() {
       return;
     }
 
-    const total = await importarAlunos(origemId, destinoId, filtro);
+    const resultado = await importarAlunos(origemId, destinoId, filtro);
     sessionStorage.setItem("ofertaMatriculas", destinoId);
-    mostrarMensagem(`${total} aluno(s) importado(s) com sucesso.`);
+    mostrarMensagem(`${resultado.importados} aluno(s) importado(s). ${resultado.ignoradosDuplicados} duplicado(s) ignorado(s).`);
     await renderMatriculas();
   });
 }
@@ -1312,13 +1096,23 @@ async function importarAlunos(origemId, destinoId, filtro) {
   const destino = await buscarPorCampo(COLECOES.matriculas, "ofertaId", "==", destinoId);
   const ofertaDestino = cache.ofertas.find((item) => item.id === destinoId) || await buscarDocumento(COLECOES.ofertas, destinoId);
   const alunosJaNoDestino = new Set(destino.map((matricula) => matricula.alunoId));
-  const alunosParaImportar = origem.filter((matricula) => {
-    if (alunosJaNoDestino.has(matricula.alunoId)) return false;
+  const candidatos = origem.filter((matricula) => {
     if (filtro === "aprovados") return matricula.situacao === SITUACOES.APROVADO;
     return true;
   });
+  const alunosParaImportar = candidatos.filter((matricula) => !alunosJaNoDestino.has(matricula.alunoId));
+  const ignoradosDuplicados = candidatos.length - alunosParaImportar.length;
+  const ignoradosFiltro = origem.length - candidatos.length;
 
-  if (alunosParaImportar.length === 0) return 0;
+  if (alunosParaImportar.length === 0) {
+    return {
+      importados: 0,
+      ignoradosDuplicados,
+      ignoradosFiltro,
+      totalOrigem: origem.length,
+      totalDestinoAntes: destino.length
+    };
+  }
 
   const lote = writeBatch(db);
   alunosParaImportar.forEach((matricula) => {
@@ -1340,7 +1134,13 @@ async function importarAlunos(origemId, destinoId, filtro) {
     });
   });
   await lote.commit();
-  return alunosParaImportar.length;
+  return {
+    importados: alunosParaImportar.length,
+    ignoradosDuplicados,
+    ignoradosFiltro,
+    totalOrigem: origem.length,
+    totalDestinoAntes: destino.length
+  };
 }
 
 async function renderProfessorOfertas() {
@@ -1536,29 +1336,18 @@ async function renderFrequenciaCoordenador() {
   const aulasOferta = ofertaSelecionadaId
     ? ordenarAulas(cache.aulas.filter((aula) => aula.ofertaId === ofertaSelecionadaId))
     : [];
-  const aulaEdicaoId = sessionStorage.getItem("editarAulaId");
-  const aulaEdicao = aulaEdicaoId ? aulasOferta.find((aula) => aula.id === aulaEdicaoId) : null;
-  if (aulaEdicaoId && !aulaEdicao) sessionStorage.removeItem("editarAulaId");
-
   const matriculas = ofertaSelecionadaId ? await buscarPorCampo(COLECOES.matriculas, "ofertaId", "==", ofertaSelecionadaId) : [];
   const frequencias = ofertaSelecionadaId ? await buscarPorCampo(COLECOES.frequencias, "ofertaId", "==", ofertaSelecionadaId) : [];
   const minimo = minimoFrequenciaOferta(ofertaSelecionada);
 
-  const linhasAulas = aulasOferta.map((aula) => {
-    const podeAlterar = aula.chamadaRealizada !== true;
-    const acoes = podeAlterar
-      ? `${botaoEditar("aula", aula.id)}${botaoRemover("aula", aula.id)}`
-      : `<button class="botao botao-neutro botao-pequeno" disabled>Chamada bloqueada</button>`;
-    return `
-      <tr>
-        <td>${formatarData(aula.dataAula)}</td>
-        <td>${formatarNumero(aula.horasAula || 0)}h</td>
-        <td>${protegerTexto(aula.descricao || "-")}</td>
-        <td><span class="badge ${aula.chamadaRealizada ? "badge-success" : "badge-warning"}">${aula.chamadaRealizada ? "Chamada feita" : "Pendente"}</span></td>
-        <td><div class="acoes">${acoes}</div></td>
-      </tr>
-    `;
-  });
+  const linhasAulas = aulasOferta.map((aula) => `
+    <tr>
+      <td>${formatarData(aula.dataAula)}</td>
+      <td>${formatarNumero(aula.horasAula || 0)}h</td>
+      <td>${protegerTexto(aula.descricao || "-")}</td>
+      <td><span class="badge ${aula.chamadaRealizada ? "badge-success" : "badge-warning"}">${aula.chamadaRealizada ? "Chamada feita" : "Pendente"}</span></td>
+    </tr>
+  `);
 
   const linhasResumo = matriculas.map((matricula) => {
     const resumo = calcularResumoFrequencia(matricula, ofertaSelecionada, aulasOferta, frequencias);
@@ -1574,16 +1363,13 @@ async function renderFrequenciaCoordenador() {
   });
 
   conteudo().innerHTML = `
-    <section class="bloco ${aulaEdicao ? "form-edicao" : ""}">
+    <section class="bloco">
       <div class="bloco-topo">
         <div>
-          <h2>${aulaEdicao ? "Editar aula cadastrada" : "Configurar frequência da oferta"}</h2>
+          <h2>Configurar frequência da oferta</h2>
           <p>O coordenador informa os dias de aula, as horas-aula daquele dia e o mínimo obrigatório.</p>
         </div>
-        <div class="acoes">
-          ${aulaEdicao ? `<button id="cancelar-edicao-aula" class="botao botao-neutro" type="button">Cancelar edição</button>` : ""}
-          <select id="select-oferta-frequencia"></select>
-        </div>
+        <select id="select-oferta-frequencia"></select>
       </div>
       <form id="form-aula" class="form-grid">
         <div>
@@ -1592,28 +1378,26 @@ async function renderFrequenciaCoordenador() {
         </div>
         <div>
           <label>Data da aula</label>
-          <input name="dataAula" type="date" value="${protegerTexto(aulaEdicao?.dataAula || "")}" />
+          <input name="dataAula" type="date" />
         </div>
         <div>
           <label>Horas-aula do dia</label>
-          <input name="horasAula" type="number" min="1" step="0.5" placeholder="Ex.: 4" value="${protegerTexto(aulaEdicao?.horasAula || "")}" />
+          <input name="horasAula" type="number" min="1" step="0.5" placeholder="Ex.: 4" />
         </div>
         <div>
           <label>Descrição/observação</label>
-          <input name="descricao" placeholder="Ex.: Aula teórica, revisão, avaliação" value="${protegerTexto(aulaEdicao?.descricao || "")}" />
+          <input name="descricao" placeholder="Ex.: Aula teórica, revisão, avaliação" />
         </div>
-        <button class="botao botao-primario" type="submit" ${ofertaSelecionadaId ? "" : "disabled"}>${aulaEdicao ? "Salvar alterações" : "Salvar configuração/aula"}</button>
+        <button class="botao botao-primario" type="submit" ${ofertaSelecionadaId ? "" : "disabled"}>Salvar configuração/aula</button>
       </form>
       <div class="aviso">
-        ${aulaEdicao
-          ? "A edição de data e horas só fica disponível para aulas que ainda não tiveram chamada realizada."
-          : "Se informar apenas a frequência mínima, o sistema atualiza a regra da oferta. Para cadastrar uma aula, preencha também data e horas-aula."}
+        Se informar apenas a frequência mínima, o sistema atualiza a regra da oferta. Para cadastrar uma aula, preencha também data e horas-aula.
       </div>
     </section>
 
     <section class="bloco">
       <h2>Aulas cadastradas</h2>
-      ${montarTabela(["Data", "Horas-aula", "Descrição", "Chamada", "Ações"], linhasAulas)}
+      ${montarTabela(["Data", "Horas-aula", "Descrição", "Chamada"], linhasAulas)}
     </section>
 
     <section class="bloco">
@@ -1627,30 +1411,8 @@ async function renderFrequenciaCoordenador() {
 
   $("#select-oferta-frequencia").addEventListener("change", async (evento) => {
     sessionStorage.setItem("ofertaFrequencia", evento.target.value);
-    sessionStorage.removeItem("editarAulaId");
     await renderFrequenciaCoordenador();
   });
-
-  if (aulaEdicao) {
-    $("#cancelar-edicao-aula").addEventListener("click", () => limparEdicao("editarAulaId", renderFrequenciaCoordenador));
-  }
-
-  $$('[data-editar-aula]').forEach((botao) => botao.addEventListener("click", async () => {
-    sessionStorage.setItem("editarAulaId", botao.dataset.editarAula);
-    await renderFrequenciaCoordenador();
-  }));
-
-  $$('[data-remover-aula]').forEach((botao) => botao.addEventListener("click", async () => {
-    const aula = aulasOferta.find((item) => item.id === botao.dataset.removerAula);
-    if (!aula || aula.chamadaRealizada === true) {
-      mostrarMensagem("Aula com chamada feita não pode ser removida por aqui.", "alerta");
-      return;
-    }
-    if (!confirm("Remover esta aula cadastrada?")) return;
-    await deleteDoc(doc(db, COLECOES.aulas, aula.id));
-    mostrarMensagem("Aula removida.");
-    await renderFrequenciaCoordenador();
-  }));
 
   $("#form-aula").addEventListener("submit", async (evento) => {
     evento.preventDefault();
@@ -1675,26 +1437,7 @@ async function renderFrequenciaCoordenador() {
       return;
     }
 
-    if (aulaEdicao) {
-      if (!dataAula || !horasAula) {
-        mostrarMensagem("Para editar a aula, informe data e horas-aula.", "alerta");
-        return;
-      }
-      const jaExiste = aulasOferta.some((aula) => aula.id !== aulaEdicao.id && aula.dataAula === dataAula);
-      if (jaExiste) {
-        mostrarMensagem("Já existe uma aula cadastrada nessa data para esta oferta.", "alerta");
-        return;
-      }
-
-      await updateDoc(doc(db, COLECOES.aulas, aulaEdicao.id), {
-        dataAula,
-        horasAula,
-        descricao: dados.get("descricao").trim(),
-        atualizadoEm: serverTimestamp(),
-        atualizadoPor: usuarioAtual.uid
-      });
-      sessionStorage.removeItem("editarAulaId");
-    } else if (dataAula && horasAula) {
+    if (dataAula && horasAula) {
       const jaExiste = aulasOferta.some((aula) => aula.dataAula === dataAula);
       if (jaExiste) {
         mostrarMensagem("Já existe uma aula cadastrada nessa data para esta oferta.", "alerta");
@@ -1716,7 +1459,7 @@ async function renderFrequenciaCoordenador() {
       });
     }
 
-    mostrarMensagem(aulaEdicao ? "Aula atualizada com sucesso." : "Frequência configurada com sucesso.");
+    mostrarMensagem("Frequência configurada com sucesso.");
     await renderFrequenciaCoordenador();
   });
 }
@@ -2054,7 +1797,7 @@ onAuthStateChanged(auth, async (usuario) => {
   }
 
   $("#usuario-nome").textContent = perfilAtual.nome || usuario.email;
-  $("#perfil-label").textContent = `${textoPerfil(perfilAtual.tipo)} · edição v2`;
+  $("#perfil-label").textContent = textoPerfil(perfilAtual.tipo);
 
   configurarEventosGlobais();
   renderizarMenu();

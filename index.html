@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sistema de Notas | Login</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body class="pagina-login">
+  <main class="login-container">
+    <section class="login-card">
+      <div class="marca">
+        <div class="marca-icone">SN</div>
+        <div>
+          <h1>Sistema de Notas</h1>
+          <p>Controle acadêmico simples com Firebase</p>
+        </div>
+      </div>
+
+      <div id="alerta-login" class="alerta" hidden></div>
+
+      <form id="form-login" class="formulario">
+        <label for="email">E-mail</label>
+        <input id="email" type="email" autocomplete="email" placeholder="seuemail@exemplo.com" required />
+
+        <label for="senha">Senha</label>
+        <input id="senha" type="password" autocomplete="current-password" placeholder="Sua senha" required />
+
+        <button id="botao-entrar" class="botao botao-primario" type="submit">Entrar no sistema</button>
+      </form>
+
+      <div class="ajuda-login">
+        <strong>Primeiro acesso:</strong>
+        <p>Crie o primeiro usuário no Firebase Authentication e depois adicione o perfil dele na coleção <code>usuarios</code> com o tipo <code>coordenador</code>.</p>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="js/auth.js"></script>
+</body>
+</html>

@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sistema de Notas | Painel</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div id="mensagens" class="mensagens"></div>
+
+  <div class="app-layout">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-topo">
+        <div class="marca-icone pequeno">SN</div>
+        <div>
+          <strong>Sistema de Notas</strong>
+          <span id="perfil-label">Carregando...</span>
+        </div>
+      </div>
+      <nav id="menu-principal" class="menu"></nav>
+    </aside>
+
+    <div class="conteudo-layout">
+      <header class="topbar">
+        <button id="botao-menu-mobile" class="botao-menu" aria-label="Abrir menu">☰</button>
+        <div>
+          <h1 id="titulo-pagina">Painel</h1>
+          <p id="subtitulo-pagina">Carregando suas informações...</p>
+        </div>
+        <div class="usuario-logado">
+          <span id="usuario-nome"></span>
+          <button id="botao-sair" class="botao botao-secundario">Sair</button>
+        </div>
+      </header>
+
+      <main id="conteudo" class="conteudo">
+        <div class="estado-vazio">
+          <div class="spinner"></div>
+          <p>Carregando sistema...</p>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

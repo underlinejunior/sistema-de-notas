@@ -573,3 +573,20 @@ td select {
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   margin: 14px 0;
 }
+
+.form-edicao {
+  border-color: #bfdbfe;
+  box-shadow: 0 0 0 4px rgba(37, 87, 214, 0.08), 0 8px 28px rgba(15, 23, 42, 0.04);
+}
+
+.botao-pequeno {
+  padding: 8px 10px;
+  font-size: 0.82rem;
+  border-radius: 10px;
+}
+
+input[readonly] {
+  background: #f8fafc;
+  color: var(--cor-texto-suave);
+  cursor: not-allowed;
+}

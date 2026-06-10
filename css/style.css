@@ -44,7 +44,7 @@ textarea {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 2px;
+  padding: 24px;
 }
 
 .login-card {
@@ -52,7 +52,7 @@ textarea {
   max-width: 440px;
   background: var(--cor-card);
   border-radius: 24px;
-  padding: 2px;
+  padding: 32px;
   box-shadow: var(--sombra);
 }
 
@@ -118,7 +118,7 @@ textarea {
   width: 100%;
   border: 1px solid var(--cor-borda);
   border-radius: 12px;
-  padding: 2px 4px;
+  padding: 12px 14px;
   outline: none;
   background: white;
   color: var(--cor-texto);
@@ -134,7 +134,7 @@ textarea:focus {
 .botao {
   border: 0;
   border-radius: 12px;
-  padding: 2px;
+  padding: 12px 16px;
   cursor: pointer;
   font-weight: 700;
   transition: 0.2s ease;
@@ -921,8 +921,8 @@ td select {
 
 .marca-logo img {
   display: block;
-  max-width: 98%;
-  max-height: 98%;
+  max-width: 78%;
+  max-height: 78%;
   object-fit: contain;
 }
 
@@ -999,8 +999,8 @@ td select {
 }
 
 .sidebar-topo .marca-logo img {
-  max-width: 96%;
-  max-height: 96%;
+  max-width: 76%;
+  max-height: 76%;
 }
 
 /* Destaque maior para logo personalizada */
@@ -1219,5 +1219,67 @@ td select {
 
   .marca-login p {
     font-size: 0.96rem;
+  }
+}
+
+
+/* =========================================================
+   AJUSTE FINAL - LOGO PROPORCIONAL AO TÍTULO
+   - imagem com tamanho visual próximo ao texto "Sistema de Notas"
+   - remove subtítulo "Controle acadêmico simples com Firebase"
+   ========================================================= */
+
+.marca-login {
+  gap: 12px !important;
+  padding: 24px 22px 22px !important;
+  margin: -4px -4px 24px !important;
+}
+
+.marca-login .marca-logo {
+  width: min(100%, 285px) !important;
+  height: 78px !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  border-radius: 22px !important;
+  padding: 12px 18px !important;
+}
+
+.marca-login .marca-logo img {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  object-fit: contain !important;
+}
+
+.marca-login h1 {
+  font-size: clamp(2rem, 5vw, 2.35rem) !important;
+  line-height: 1.05 !important;
+  margin: 0 !important;
+}
+
+.marca-login p,
+.marca-login .marca-subtitulo {
+  display: none !important;
+}
+
+.sidebar-topo .marca-logo {
+  width: 62px !important;
+  height: 62px !important;
+  min-width: 62px !important;
+  border-radius: 18px !important;
+  padding: 8px !important;
+}
+
+@media (max-width: 560px) {
+  .marca-login .marca-logo {
+    width: min(100%, 245px) !important;
+    height: 68px !important;
+    border-radius: 20px !important;
+    padding: 10px 14px !important;
+  }
+
+  .marca-login h1 {
+    font-size: 1.85rem !important;
   }
 }

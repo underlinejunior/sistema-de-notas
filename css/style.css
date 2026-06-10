@@ -921,8 +921,8 @@ td select {
 
 .marca-logo img {
   display: block;
-  max-width: 78%;
-  max-height: 78%;
+  max-width: 98%;
+  max-height: 98%;
   object-fit: contain;
 }
 
@@ -999,8 +999,8 @@ td select {
 }
 
 .sidebar-topo .marca-logo img {
-  max-width: 76%;
-  max-height: 76%;
+  max-width: 96%;
+  max-height: 96%;
 }
 
 /* Destaque maior para logo personalizada */

@@ -22,5 +22,6 @@ export const SITUACOES = {
   APROVADO: "aprovado",
   REPROVADO: "reprovado",
   TRANCADO: "trancado",
-  DEPENDENCIA: "dependencia"
+  DEPENDENCIA: "dependencia",
+  CANCELADA: "cancelada"
 };

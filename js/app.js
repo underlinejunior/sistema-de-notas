@@ -263,6 +263,22 @@ function nomeUsuario(id) {
   return cache.usuarios.find((usuario) => usuario.id === id)?.nome || "Usuário não informado";
 }
 
+function matriculaCancelada(matricula) {
+  return matricula?.situacao === SITUACOES.CANCELADA || matricula?.ativo === false || matricula?.cancelada === true;
+}
+
+function ordenarMatriculasPorAluno(matriculas) {
+  return [...matriculas].sort((a, b) => {
+    const aCancelada = matriculaCancelada(a) ? 1 : 0;
+    const bCancelada = matriculaCancelada(b) ? 1 : 0;
+    if (aCancelada !== bCancelada) return aCancelada - bCancelada;
+
+    const nomeA = nomeUsuario(a.alunoId) || a.alunoNome || "";
+    const nomeB = nomeUsuario(b.alunoId) || b.alunoNome || "";
+    return nomeA.localeCompare(nomeB, "pt-BR", { sensitivity: "base" });
+  });
+}
+
 function resumoDisciplinaCurso(item) {
   if (!item) return "Disciplina do curso não informada";
   return `${nomeCurso(item.cursoId)} · ${nomeDisciplina(item.disciplinaId)} · ${item.periodo || "?"}º período`;
@@ -1384,24 +1400,38 @@ async function renderMatriculas() {
   const ofertas = cache.ofertas.filter((oferta) => oferta.ativa !== false);
   const ofertaSelecionadaId = sessionStorage.getItem("ofertaMatriculas") || ofertas[0]?.id || "";
   const todasMatriculas = await buscarTodos(COLECOES.matriculas);
-  const matriculasOferta = ofertaSelecionadaId ? todasMatriculas.filter((matricula) => matricula.ofertaId === ofertaSelecionadaId) : [];
+  const matriculasOfertaBrutas = ofertaSelecionadaId ? todasMatriculas.filter((matricula) => matricula.ofertaId === ofertaSelecionadaId) : [];
+  const matriculasOferta = ordenarMatriculasPorAluno(matriculasOfertaBrutas);
+  const matriculasAtivas = matriculasOferta.filter((matricula) => !matriculaCancelada(matricula));
+  const matriculasCanceladas = matriculasOferta.filter((matricula) => matriculaCancelada(matricula));
   const ofertaSelecionada = ofertas.find((oferta) => oferta.id === ofertaSelecionadaId);
 
-  const linhas = matriculasOferta.map((matricula, indice) => `
-    <tr>
-      <td class="coluna-numero">${indice + 1}</td>
-      <td>${protegerTexto(nomeUsuario(matricula.alunoId) || matricula.alunoNome)}</td>
-      <td><span class="badge ${classeSituacao(matricula.situacao)}">${protegerTexto(textoSituacao(matricula.situacao))}</span></td>
-      <td>${formatarNumero(matricula.mediaFinal || 0)}</td>
-      <td>${formatarNumero(matricula.percentualAproveitamento || 0)}%</td>
-    </tr>
-  `);
+  const linhas = matriculasOferta.map((matricula, indice) => {
+    const cancelada = matriculaCancelada(matricula);
+    const acao = cancelada
+      ? `<button class="botao botao-secundario botao-pequeno" data-reativar-matricula="${matricula.id}">Reativar</button>`
+      : `<button class="botao botao-perigo botao-pequeno" data-cancelar-matricula="${matricula.id}">Cancelar</button>`;
+
+    return `
+      <tr class="${cancelada ? "linha-cancelada" : ""}">
+        <td class="coluna-numero">${indice + 1}</td>
+        <td>
+          <strong>${protegerTexto(nomeUsuario(matricula.alunoId) || matricula.alunoNome)}</strong>
+          ${cancelada && matricula.motivoCancelamento ? `<small class="texto-suave">Motivo: ${protegerTexto(matricula.motivoCancelamento)}</small>` : ""}
+        </td>
+        <td><span class="badge ${classeSituacao(matricula.situacao)}">${protegerTexto(textoSituacao(matricula.situacao))}</span></td>
+        <td>${formatarNumero(matricula.mediaFinal || 0)}</td>
+        <td>${formatarNumero(matricula.percentualAproveitamento || 0)}%</td>
+        <td><div class="acoes">${acao}</div></td>
+      </tr>
+    `;
+  });
 
   linhas.push(`
     <tr class="linha-total">
       <td></td>
       <td><strong>Total</strong></td>
-      <td colspan="3"><strong>${matriculasOferta.length} aluno(s) na disciplina</strong></td>
+      <td colspan="4"><strong>${matriculasAtivas.length} aluno(s) ativo(s) na disciplina · ${matriculasCanceladas.length} matrícula(s) cancelada(s) · ${matriculasOferta.length} total geral</strong></td>
     </tr>
   `);
 
@@ -1455,7 +1485,7 @@ async function renderMatriculas() {
         <select id="filtro-oferta-matriculas"></select>
       </div>
 
-      ${montarTabela(["Nº", "Aluno", "Situação", "Média", "Aproveitamento"], linhas)}
+      ${montarTabela(["Nº", "Aluno", "Situação", "Média", "Aproveitamento", "Ação"], linhas)}
     </section>
   `;
 
@@ -1533,8 +1563,20 @@ async function renderMatriculas() {
 
     const resultado = await importarAlunos(origemId, destinoId, filtro);
     sessionStorage.setItem("ofertaMatriculas", destinoId);
-    mostrarMensagem(`${resultado.importados} aluno(s) importado(s). ${resultado.ignoradosDuplicados} duplicado(s) ignorado(s).`);
+    mostrarMensagem(`${resultado.importados} aluno(s) importado(s). ${resultado.ignoradosDuplicados} duplicado(s) ou cancelado(s) ignorado(s).`);
     await renderMatriculas();
+  });
+
+  $$('[data-cancelar-matricula]').forEach((botao) => {
+    botao.addEventListener("click", async () => {
+      await cancelarMatricula(botao.dataset.cancelarMatricula);
+    });
+  });
+
+  $$('[data-reativar-matricula]').forEach((botao) => {
+    botao.addEventListener("click", async () => {
+      await reativarMatricula(botao.dataset.reativarMatricula);
+    });
   });
 }
 
@@ -1542,10 +1584,15 @@ async function matricularAluno(alunoId, ofertaId) {
   const oferta = cache.ofertas.find((item) => item.id === ofertaId) || await buscarDocumento(COLECOES.ofertas, ofertaId);
   const aluno = cache.usuarios.find((item) => item.id === alunoId) || await buscarDocumento(COLECOES.usuarios, alunoId);
   const matriculasDaOferta = await buscarPorCampo(COLECOES.matriculas, "ofertaId", "==", ofertaId);
-  const jaExiste = matriculasDaOferta.some((matricula) => matricula.alunoId === alunoId);
+  const matriculaExistente = matriculasDaOferta.find((matricula) => matricula.alunoId === alunoId);
 
-  if (jaExiste) {
+  if (matriculaExistente && !matriculaCancelada(matriculaExistente)) {
     mostrarMensagem("Esse aluno já está matriculado nessa oferta.", "alerta");
+    return;
+  }
+
+  if (matriculaExistente && matriculaCancelada(matriculaExistente)) {
+    mostrarMensagem("Esse aluno possui uma matrícula cancelada nessa oferta. Use o botão Reativar na lista de alunos matriculados.", "alerta");
     return;
   }
 
@@ -1565,12 +1612,67 @@ async function matricularAluno(alunoId, ofertaId) {
   });
 }
 
+async function cancelarMatricula(matriculaId) {
+  const matricula = await buscarDocumento(COLECOES.matriculas, matriculaId);
+  if (!matricula) {
+    mostrarMensagem("Matrícula não encontrada.", "erro");
+    return;
+  }
+
+  const aluno = nomeUsuario(matricula.alunoId) || matricula.alunoNome || "este aluno";
+  const motivo = window.prompt(`Informe o motivo do cancelamento da matrícula de ${aluno}:`, "Desistência do curso");
+  if (motivo === null) return;
+
+  const confirmar = window.confirm(`Confirmar o cancelamento da matrícula de ${aluno}? O aluno deixará de aparecer nas telas de notas e frequência do professor.`);
+  if (!confirmar) return;
+
+  await updateDoc(doc(db, COLECOES.matriculas, matriculaId), {
+    situacao: SITUACOES.CANCELADA,
+    ativo: false,
+    cancelada: true,
+    motivoCancelamento: motivo.trim(),
+    canceladaEm: serverTimestamp(),
+    canceladaPor: usuarioAtual.uid,
+    atualizadoEm: serverTimestamp(),
+    atualizadoPor: usuarioAtual.uid
+  });
+
+  mostrarMensagem("Matrícula cancelada com sucesso.");
+  await renderMatriculas();
+}
+
+async function reativarMatricula(matriculaId) {
+  const matricula = await buscarDocumento(COLECOES.matriculas, matriculaId);
+  if (!matricula) {
+    mostrarMensagem("Matrícula não encontrada.", "erro");
+    return;
+  }
+
+  const aluno = nomeUsuario(matricula.alunoId) || matricula.alunoNome || "este aluno";
+  const confirmar = window.confirm(`Deseja reativar a matrícula de ${aluno}?`);
+  if (!confirmar) return;
+
+  await updateDoc(doc(db, COLECOES.matriculas, matriculaId), {
+    situacao: SITUACOES.CURSANDO,
+    ativo: true,
+    cancelada: false,
+    reativadaEm: serverTimestamp(),
+    reativadaPor: usuarioAtual.uid,
+    atualizadoEm: serverTimestamp(),
+    atualizadoPor: usuarioAtual.uid
+  });
+
+  mostrarMensagem("Matrícula reativada com sucesso.");
+  await renderMatriculas();
+}
+
 async function importarAlunos(origemId, destinoId, filtro) {
   const origem = await buscarPorCampo(COLECOES.matriculas, "ofertaId", "==", origemId);
   const destino = await buscarPorCampo(COLECOES.matriculas, "ofertaId", "==", destinoId);
   const ofertaDestino = cache.ofertas.find((item) => item.id === destinoId) || await buscarDocumento(COLECOES.ofertas, destinoId);
   const alunosJaNoDestino = new Set(destino.map((matricula) => matricula.alunoId));
   const candidatos = origem.filter((matricula) => {
+    if (matriculaCancelada(matricula)) return false;
     if (filtro === "aprovados") return matricula.situacao === SITUACOES.APROVADO;
     return true;
   });
@@ -1677,6 +1779,7 @@ async function renderNotas(coordenador = false) {
       notas = await buscarPorCampo(COLECOES.notas, "ofertaId", "==", ofertaSelecionadaId);
     }
   }
+  matriculas = matriculas.filter((matricula) => !matriculaCancelada(matricula));
   const notaPorMatricula = new Map(notas.map((nota) => [nota.matriculaId || nota.id, nota]));
 
   const linhas = matriculas.map((matricula) => {
@@ -1823,7 +1926,8 @@ async function renderFrequenciaCoordenador() {
   const aulasOferta = ofertaSelecionadaId
     ? ordenarAulas(cache.aulas.filter((aula) => aula.ofertaId === ofertaSelecionadaId))
     : [];
-  const matriculas = ofertaSelecionadaId ? await buscarPorCampo(COLECOES.matriculas, "ofertaId", "==", ofertaSelecionadaId) : [];
+  const matriculasTodas = ofertaSelecionadaId ? await buscarPorCampo(COLECOES.matriculas, "ofertaId", "==", ofertaSelecionadaId) : [];
+  const matriculas = matriculasTodas.filter((matricula) => !matriculaCancelada(matricula));
   const frequencias = ofertaSelecionadaId ? await buscarPorCampo(COLECOES.frequencias, "ofertaId", "==", ofertaSelecionadaId) : [];
   const minimo = minimoFrequenciaOferta(ofertaSelecionada);
 
@@ -1968,6 +2072,7 @@ async function renderProfessorFrequencia() {
   let frequenciasOferta = [];
   if (ofertaSelecionadaId) {
     matriculas = await buscarPorCampo(COLECOES.matriculas, "ofertaId", "==", ofertaSelecionadaId);
+    matriculas = matriculas.filter((matricula) => !matriculaCancelada(matricula));
     frequenciasOferta = await buscarPorCampo(COLECOES.frequencias, "ofertaId", "==", ofertaSelecionadaId);
   }
   const frequenciasDaOferta = frequenciasOferta.filter((frequencia) => frequencia.ofertaId === ofertaSelecionadaId);

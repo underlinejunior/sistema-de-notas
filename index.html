@@ -9,8 +9,11 @@
 <body class="pagina-login">
   <main class="login-container">
     <section class="login-card">
-      <div class="marca">
-        <div class="marca-icone">SN</div>
+      <div class="marca marca-login">
+        <div class="marca-icone marca-logo">
+          <img src="assets/logo.png" alt="Logo do sistema" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline';" />
+          <span>SN</span>
+        </div>
         <div>
           <h1>Sistema de Notas</h1>
           <p>Controle acadêmico simples com Firebase</p>
@@ -18,20 +21,27 @@
       </div>
 
       <div id="alerta-login" class="alerta" hidden></div>
+      <div id="sucesso-login" class="alerta alerta-sucesso" hidden></div>
 
-      <form id="form-login" class="formulario">
+      <form id="form-login" class="formulario formulario-login">
         <label for="email">E-mail</label>
-        <input id="email" type="email" autocomplete="email" placeholder="seuemail@exemplo.com" required />
+        <input id="email" type="email" autocomplete="email" placeholder="email cadastrado na inscrição" required />
 
         <label for="senha">Senha</label>
-        <input id="senha" type="password" autocomplete="current-password" placeholder="Sua senha" required />
+        <div class="campo-senha">
+          <input id="senha" type="password" autocomplete="current-password" placeholder="telefone com DDD, somente números" required />
+          <button id="toggle-senha-login" class="botao-olho" type="button" aria-label="Mostrar senha" title="Mostrar senha">👁</button>
+        </div>
 
         <button id="botao-entrar" class="botao botao-primario" type="submit">Entrar no sistema</button>
+        <button id="botao-esqueci-senha" class="link-esqueceu-senha" type="button">Esqueci minha senha</button>
       </form>
 
       <div class="ajuda-login">
-        <strong>Primeiro acesso:</strong>
-        <p>Crie o primeiro usuário no Firebase Authentication e depois adicione o perfil dele na coleção <code>usuarios</code> com o tipo <code>coordenador</code>.</p>
+        <strong>Como acessar:</strong>
+        <p><strong>Usuário:</strong> use o e-mail informado na inscrição do curso.</p>
+        <p><strong>Senha inicial:</strong> use o telefone informado na inscrição, com DDD e somente números.</p>
+        <p class="texto-miudo">Exemplo: se o telefone informado foi (86) 99999-9999, digite <code>86999999999</code>.</p>
       </div>
     </section>
   </main>

@@ -870,3 +870,135 @@ td select {
   font-size: 0.92rem;
   font-weight: 600;
 }
+
+.botao-pequeno {
+  padding: 8px 10px;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
+.linha-cancelada td {
+  background: #fff7f7;
+  color: #6b7280;
+}
+
+.linha-cancelada td strong {
+  color: #374151;
+}
+
+.texto-suave {
+  display: block;
+  color: var(--cor-texto-suave);
+  font-size: 0.82rem;
+  margin-top: 4px;
+}
+
+/* Ajustes profissionais da tela de login e identidade visual */
+.login-card {
+  max-width: 470px;
+  border: 1px solid rgba(226, 232, 240, 0.95);
+}
+
+.marca-login {
+  align-items: center;
+}
+
+.marca-login h1 {
+  font-size: clamp(1.65rem, 4vw, 2rem);
+  line-height: 1.05;
+}
+
+.marca-login p {
+  font-size: 1rem;
+  line-height: 1.35;
+}
+
+.marca-logo {
+  overflow: hidden;
+  background: linear-gradient(135deg, var(--cor-primaria), #1d4ed8);
+}
+
+.marca-logo img {
+  display: block;
+  max-width: 78%;
+  max-height: 78%;
+  object-fit: contain;
+}
+
+.marca-logo span {
+  display: none;
+}
+
+.formulario-login {
+  gap: 11px;
+}
+
+.formulario-login input {
+  min-height: 52px;
+  border-radius: 14px;
+  font-size: 1rem;
+}
+
+.formulario-login .botao-primario {
+  min-height: 52px;
+  margin-top: 2px;
+  border-radius: 14px;
+  font-size: 1rem;
+}
+
+.formulario-login .campo-senha input {
+  padding-right: 56px;
+}
+
+.formulario-login .botao-olho {
+  right: 9px;
+  min-width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: #f1f5ff;
+}
+
+.link-esqueceu-senha {
+  border: 0;
+  background: transparent;
+  color: var(--cor-primaria);
+  cursor: pointer;
+  font-weight: 800;
+  padding: 4px 0 0;
+  width: fit-content;
+  justify-self: center;
+}
+
+.link-esqueceu-senha:hover {
+  color: var(--cor-primaria-escura);
+  text-decoration: underline;
+}
+
+.link-esqueceu-senha:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.alerta-sucesso {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+  color: var(--cor-sucesso);
+}
+
+.ajuda-login {
+  line-height: 1.35;
+}
+
+.ajuda-login p + p {
+  margin-top: 8px;
+}
+
+.ajuda-login .texto-miudo {
+  font-size: 0.86rem;
+}
+
+.sidebar-topo .marca-logo img {
+  max-width: 76%;
+  max-height: 76%;
+}

@@ -59,7 +59,8 @@ export function textoSituacao(situacao) {
     aprovado: "Aprovado",
     reprovado: "Reprovado",
     trancado: "Trancado",
-    dependencia: "Dependência"
+    dependencia: "Dependência",
+    cancelada: "Cancelada"
   };
   return mapa[situacao] || "Não informado";
 }
@@ -70,7 +71,8 @@ export function classeSituacao(situacao) {
     aprovado: "badge-success",
     reprovado: "badge-danger",
     trancado: "badge-muted",
-    dependencia: "badge-warning"
+    dependencia: "badge-warning",
+    cancelada: "badge-danger"
   };
   return mapa[situacao] || "badge-muted";
 }

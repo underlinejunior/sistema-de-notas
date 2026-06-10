@@ -1,4 +1,4 @@
-import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+import { signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 import { auth, db } from "./firebase-init.js";
 import { COLECOES } from "./colecoes.js";
@@ -8,7 +8,10 @@ const formularioLogin = $("#form-login");
 const campoEmail = $("#email");
 const campoSenha = $("#senha");
 const botaoEntrar = $("#botao-entrar");
+const botaoEsqueciSenha = $("#botao-esqueci-senha");
+const botaoToggleSenha = $("#toggle-senha-login");
 const alerta = $("#alerta-login");
+const sucesso = $("#sucesso-login");
 
 function mostrarAlerta(mensagem) {
   if (!alerta) return;
@@ -17,9 +20,20 @@ function mostrarAlerta(mensagem) {
 }
 
 function ocultarAlerta() {
-  if (!alerta) return;
-  alerta.hidden = true;
-  alerta.textContent = "";
+  if (alerta) {
+    alerta.hidden = true;
+    alerta.textContent = "";
+  }
+  if (sucesso) {
+    sucesso.hidden = true;
+    sucesso.textContent = "";
+  }
+}
+
+function mostrarSucesso(mensagem) {
+  if (!sucesso) return;
+  sucesso.innerHTML = protegerTexto(mensagem);
+  sucesso.hidden = false;
 }
 
 async function buscarPerfil(uid) {
@@ -69,8 +83,45 @@ async function entrar(evento) {
   }
 }
 
+async function enviarRedefinicaoSenha() {
+  ocultarAlerta();
+  const email = campoEmail.value.trim();
+
+  if (!email) {
+    mostrarAlerta("Informe seu e-mail cadastrado para receber o link de redefinição de senha.");
+    campoEmail.focus();
+    return;
+  }
+
+  botaoEsqueciSenha.disabled = true;
+  botaoEsqueciSenha.textContent = "Enviando link...";
+
+  try {
+    await sendPasswordResetEmail(auth, email);
+    mostrarSucesso("Enviamos um link de redefinição de senha para o e-mail informado. Confira sua caixa de entrada e o spam.");
+  } catch (erro) {
+    console.error(erro);
+    mostrarAlerta("Não foi possível enviar o link de redefinição. Confira se o e-mail está correto e se ele foi cadastrado no sistema.");
+  } finally {
+    botaoEsqueciSenha.disabled = false;
+    botaoEsqueciSenha.textContent = "Esqueci minha senha";
+  }
+}
+
+function alternarSenhaLogin() {
+  if (!campoSenha || !botaoToggleSenha) return;
+  const deveMostrar = campoSenha.type === "password";
+  campoSenha.type = deveMostrar ? "text" : "password";
+  botaoToggleSenha.textContent = deveMostrar ? "🙈" : "👁";
+  botaoToggleSenha.setAttribute("aria-label", deveMostrar ? "Ocultar senha" : "Mostrar senha");
+  botaoToggleSenha.setAttribute("title", deveMostrar ? "Ocultar senha" : "Mostrar senha");
+  campoSenha.focus();
+}
+
 if (formularioLogin) {
   formularioLogin.addEventListener("submit", entrar);
+  if (botaoEsqueciSenha) botaoEsqueciSenha.addEventListener("click", enviarRedefinicaoSenha);
+  if (botaoToggleSenha) botaoToggleSenha.addEventListener("click", alternarSenhaLogin);
 
   onAuthStateChanged(auth, async (usuario) => {
     if (!usuario) return;

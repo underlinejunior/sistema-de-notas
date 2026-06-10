@@ -1077,3 +1077,147 @@ td select {
     font-size: 1.8rem;
   }
 }
+
+/* =========================================================
+   SUPER DESTAQUE DA LOGO - usa as classes reais do projeto:
+   .marca-login, .marca-logo e .sidebar-topo
+   ========================================================= */
+
+.pagina-login {
+  background:
+    radial-gradient(circle at 18% 12%, rgba(37, 87, 214, 0.22), transparent 34%),
+    radial-gradient(circle at 86% 88%, rgba(29, 78, 216, 0.16), transparent 32%),
+    linear-gradient(135deg, #eef4ff 0%, #f8fafc 48%, #eef4ff 100%);
+}
+
+.login-card {
+  max-width: 540px;
+  padding: 30px;
+  border-radius: 28px;
+  overflow: hidden;
+}
+
+.marca-login {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 18px;
+  margin: -6px -6px 28px;
+  padding: 30px 24px 28px;
+  border: 0;
+  border-radius: 26px;
+  background:
+    radial-gradient(circle at 22% 18%, rgba(255, 255, 255, 0.24), transparent 26%),
+    radial-gradient(circle at 82% 20%, rgba(255, 255, 255, 0.12), transparent 28%),
+    linear-gradient(135deg, #0f2f83 0%, #2557d6 52%, #3b82f6 100%);
+  box-shadow:
+    0 24px 55px rgba(37, 87, 214, 0.30),
+    inset 0 1px 0 rgba(255, 255, 255, 0.20);
+}
+
+.marca-login .marca-logo {
+  width: min(100%, 250px);
+  height: 132px;
+  border-radius: 28px;
+  padding: 18px 22px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  box-shadow:
+    0 18px 40px rgba(15, 23, 42, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  backdrop-filter: blur(2px);
+}
+
+.marca-login .marca-logo img {
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 10px 18px rgba(15, 23, 42, 0.36));
+}
+
+.marca-login h1 {
+  color: #ffffff;
+  font-size: clamp(2rem, 5vw, 2.65rem);
+  line-height: 1.05;
+  letter-spacing: -0.05em;
+  text-shadow: 0 7px 18px rgba(15, 23, 42, 0.22);
+}
+
+.marca-login p {
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 1.05rem;
+  max-width: 360px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.sidebar-topo {
+  align-items: center;
+  gap: 16px;
+  padding: 18px 8px 22px;
+  margin-bottom: 22px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.10);
+}
+
+.sidebar-topo .marca-logo {
+  width: 78px;
+  height: 78px;
+  min-width: 78px;
+  border-radius: 24px;
+  padding: 11px;
+  background:
+    radial-gradient(circle at 24% 18%, rgba(255, 255, 255, 0.24), transparent 30%),
+    linear-gradient(135deg, #1e40af 0%, #2557d6 58%, #3b82f6 100%);
+  border: 1px solid rgba(255, 255, 255, 0.20);
+  box-shadow:
+    0 18px 36px rgba(0, 0, 0, 0.24),
+    0 10px 26px rgba(37, 87, 214, 0.28);
+}
+
+.sidebar-topo .marca-logo img {
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 7px 13px rgba(15, 23, 42, 0.34));
+}
+
+.sidebar-topo strong {
+  font-size: 1.22rem;
+  line-height: 1.12;
+}
+
+.sidebar-topo span {
+  margin-top: 5px;
+  font-size: 0.95rem;
+}
+
+@media (max-width: 560px) {
+  .login-card {
+    padding: 22px;
+  }
+
+  .marca-login {
+    margin: -2px -2px 24px;
+    padding: 24px 18px 22px;
+  }
+
+  .marca-login .marca-logo {
+    width: min(100%, 210px);
+    height: 108px;
+    border-radius: 24px;
+    padding: 14px 18px;
+  }
+
+  .marca-login h1 {
+    font-size: 1.9rem;
+  }
+
+  .marca-login p {
+    font-size: 0.96rem;
+  }
+}

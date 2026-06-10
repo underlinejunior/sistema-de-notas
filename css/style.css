@@ -183,6 +183,29 @@ textarea:focus {
   margin-bottom: 16px;
 }
 
+
+.alerta-compacta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.botao-link {
+  border: 0;
+  background: transparent;
+  color: var(--cor-primaria);
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+  padding: 0 2px;
+  text-decoration: underline;
+}
+
+.botao-link:hover {
+  color: var(--cor-primaria-escura);
+}
+
 .ajuda-login {
   margin-top: 20px;
   padding: 14px;
@@ -739,4 +762,111 @@ td select {
   .painel-guia .botao {
     width: 100%;
   }
+}
+
+/* Senhas: botão de mostrar/ocultar */
+.campo-senha {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.campo-senha input {
+  padding-right: 52px;
+}
+
+.botao-olho {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 0;
+  background: #eef2ff;
+  color: var(--cor-primaria);
+  border-radius: 10px;
+  min-width: 36px;
+  height: 34px;
+  cursor: pointer;
+  font-size: 1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.botao-olho:hover {
+  background: #dbeafe;
+}
+
+/* Modal de alteração de senha */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: rgba(15, 23, 42, 0.52);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.modal-card {
+  width: min(520px, 100%);
+  background: var(--cor-card);
+  border: 1px solid var(--cor-borda);
+  border-radius: 22px;
+  box-shadow: var(--sombra);
+  padding: 22px;
+}
+
+.modal-topo {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.modal-topo h2 {
+  margin: 0 0 6px;
+}
+
+.modal-topo p {
+  margin: 0;
+  color: var(--cor-texto-suave);
+  line-height: 1.4;
+}
+
+.modal-fechar {
+  border: 0;
+  background: #f3f4f6;
+  color: var(--cor-texto);
+  border-radius: 12px;
+  width: 38px;
+  height: 38px;
+  cursor: pointer;
+  font-size: 1.4rem;
+  line-height: 1;
+}
+
+.modal-fechar:hover {
+  background: #e5e7eb;
+}
+
+.modal-acoes {
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+@media (max-width: 640px) {
+  .modal-acoes .botao {
+    width: 100%;
+  }
+}
+
+.detalhe-total {
+  display: block;
+  margin-top: 4px;
+  color: var(--cor-texto-suave);
+  font-size: 0.92rem;
+  font-weight: 600;
 }

@@ -3,7 +3,10 @@ import {
   getAuth,
   onAuthStateChanged,
   signOut,
-  createUserWithEmailAndPassword
+  createUserWithEmailAndPassword,
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+  updatePassword
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 import {
   collection,
@@ -101,6 +104,153 @@ function textoPerfil(tipo) {
   return mapa[tipo] || "Usuário";
 }
 
+function configurarBotoesSenha(raiz = document) {
+  $$('[data-toggle-senha]', raiz).forEach((botao) => {
+    if (botao.dataset.configurado === "true") return;
+    botao.dataset.configurado = "true";
+
+    botao.addEventListener("click", () => {
+      const campo = document.getElementById(botao.dataset.toggleSenha);
+      if (!campo) return;
+
+      const mostrar = campo.type === "password";
+      campo.type = mostrar ? "text" : "password";
+      botao.textContent = mostrar ? "🙈" : "👁";
+      botao.setAttribute("aria-label", mostrar ? "Ocultar senha" : "Mostrar senha");
+    });
+  });
+}
+
+function mostrarAlertaModal(mensagem) {
+  const alerta = $("#alerta-alterar-senha");
+  if (!alerta) return;
+  alerta.textContent = mensagem;
+  alerta.hidden = false;
+}
+
+function fecharModalAlterarSenha() {
+  const modal = $("#modal-alterar-senha");
+  if (modal) modal.remove();
+}
+
+function abrirModalAlterarSenha() {
+  fecharModalAlterarSenha();
+
+  document.body.insertAdjacentHTML("beforeend", `
+    <div id="modal-alterar-senha" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="titulo-modal-senha">
+      <section class="modal-card">
+        <div class="modal-topo">
+          <div>
+            <h2 id="titulo-modal-senha">Alterar senha</h2>
+            <p>Informe sua senha atual e defina uma nova senha com pelo menos 6 caracteres.</p>
+          </div>
+          <button type="button" class="modal-fechar" data-fechar-modal aria-label="Fechar">×</button>
+        </div>
+
+        <form id="form-alterar-senha" class="formulario">
+          <label for="senha-atual">Senha atual</label>
+          <div class="campo-senha">
+            <input id="senha-atual" name="senhaAtual" type="password" autocomplete="current-password" required placeholder="Digite sua senha atual" />
+            <button class="botao-olho" type="button" data-toggle-senha="senha-atual" aria-label="Mostrar senha">👁</button>
+          </div>
+
+          <label for="nova-senha">Nova senha</label>
+          <div class="campo-senha">
+            <input id="nova-senha" name="novaSenha" type="password" autocomplete="new-password" minlength="6" required placeholder="Mínimo 6 caracteres" />
+            <button class="botao-olho" type="button" data-toggle-senha="nova-senha" aria-label="Mostrar senha">👁</button>
+          </div>
+
+          <label for="confirmar-nova-senha">Confirmar nova senha</label>
+          <div class="campo-senha">
+            <input id="confirmar-nova-senha" name="confirmarSenha" type="password" autocomplete="new-password" minlength="6" required placeholder="Repita a nova senha" />
+            <button class="botao-olho" type="button" data-toggle-senha="confirmar-nova-senha" aria-label="Mostrar senha">👁</button>
+          </div>
+
+          <div id="alerta-alterar-senha" class="alerta" hidden></div>
+
+          <div class="acoes modal-acoes">
+            <button type="button" class="botao botao-secundario" data-fechar-modal>Cancelar</button>
+            <button id="botao-confirmar-senha" type="submit" class="botao botao-primario">Salvar nova senha</button>
+          </div>
+        </form>
+      </section>
+    </div>
+  `);
+
+  const modal = $("#modal-alterar-senha");
+  configurarBotoesSenha(modal);
+
+  $$('[data-fechar-modal]', modal).forEach((botao) => {
+    botao.addEventListener("click", fecharModalAlterarSenha);
+  });
+
+  modal.addEventListener("click", (evento) => {
+    if (evento.target === modal) fecharModalAlterarSenha();
+  });
+
+  $("#form-alterar-senha").addEventListener("submit", alterarSenhaUsuarioAtual);
+  $("#senha-atual").focus();
+}
+
+async function alterarSenhaUsuarioAtual(evento) {
+  evento.preventDefault();
+  const dados = new FormData(evento.target);
+  const senhaAtual = String(dados.get("senhaAtual") || "");
+  const novaSenha = String(dados.get("novaSenha") || "");
+  const confirmarSenha = String(dados.get("confirmarSenha") || "");
+  const alerta = $("#alerta-alterar-senha");
+  const botao = $("#botao-confirmar-senha");
+
+  if (alerta) {
+    alerta.hidden = true;
+    alerta.textContent = "";
+  }
+
+  if (!senhaAtual || !novaSenha || !confirmarSenha) {
+    mostrarAlertaModal("Preencha todos os campos para alterar a senha.");
+    return;
+  }
+
+  if (novaSenha.length < 6) {
+    mostrarAlertaModal("A nova senha precisa ter pelo menos 6 caracteres.");
+    return;
+  }
+
+  if (novaSenha !== confirmarSenha) {
+    mostrarAlertaModal("A confirmação da senha não confere.");
+    return;
+  }
+
+  if (!auth.currentUser?.email) {
+    mostrarAlertaModal("Não foi possível identificar o e-mail do usuário atual.");
+    return;
+  }
+
+  botao.disabled = true;
+  botao.textContent = "Salvando...";
+
+  try {
+    const credencial = EmailAuthProvider.credential(auth.currentUser.email, senhaAtual);
+    await reauthenticateWithCredential(auth.currentUser, credencial);
+    await updatePassword(auth.currentUser, novaSenha);
+    fecharModalAlterarSenha();
+    mostrarMensagem("Senha alterada com sucesso.");
+  } catch (erro) {
+    console.error(erro);
+    const mensagens = {
+      "auth/invalid-credential": "A senha atual não confere. Verifique e tente novamente.",
+      "auth/wrong-password": "A senha atual não confere. Verifique e tente novamente.",
+      "auth/weak-password": "A nova senha é muito fraca. Use pelo menos 6 caracteres.",
+      "auth/too-many-requests": "Muitas tentativas. Aguarde alguns minutos e tente novamente.",
+      "auth/requires-recent-login": "Por segurança, saia do sistema, entre novamente e tente alterar a senha."
+    };
+    mostrarAlertaModal(mensagens[erro.code] || "Não foi possível alterar a senha. Tente novamente.");
+  } finally {
+    botao.disabled = false;
+    botao.textContent = "Salvar nova senha";
+  }
+}
+
 function nomeCurso(id) {
   return cache.cursos.find((curso) => curso.id === id)?.nome || "Curso não informado";
 }
@@ -141,6 +291,53 @@ function ordenarAulas(aulas) {
 function minimoFrequenciaOferta(oferta) {
   const minimo = Number(oferta?.frequenciaMinima || 75);
   return minimo > 0 ? minimo : 75;
+}
+
+function normalizarChaveOferta(valor) {
+  return String(valor || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "") || "sem-info";
+}
+
+function chaveOfertaUnica(dados) {
+  return [
+    normalizarChaveOferta(dados.disciplinaCursoId),
+    normalizarChaveOferta(dados.periodoLetivo),
+    normalizarChaveOferta(dados.turma)
+  ].join("__");
+}
+
+function idOfertaUnica(dados) {
+  return `oferta_${chaveOfertaUnica(dados)}`;
+}
+
+function identificarOfertasDuplicadas() {
+  const grupos = new Map();
+
+  cache.ofertas
+    .filter((oferta) => oferta.ativa !== false)
+    .forEach((oferta) => {
+      const chave = chaveOfertaUnica(oferta);
+      if (!grupos.has(chave)) grupos.set(chave, []);
+      grupos.get(chave).push(oferta);
+    });
+
+  return Array.from(grupos.values())
+    .filter((grupo) => grupo.length > 1)
+    .map((grupo) => ({ principal: grupo[0], duplicadas: grupo.slice(1) }));
+}
+
+function ofertaDuplicadaAtiva(dados, ignorarId = null) {
+  const chave = chaveOfertaUnica(dados);
+  return cache.ofertas.find((oferta) =>
+    oferta.ativa !== false
+    && oferta.id !== ignorarId
+    && chaveOfertaUnica(oferta) === chave
+  );
 }
 
 function totalHorasAulas(aulas) {
@@ -257,6 +454,25 @@ async function carregarBaseAcademica() {
   cache.aulas = aulas;
 }
 
+async function buscarRegistrosPorOfertas(colecaoNome, ofertas) {
+  if (!ofertas?.length) return [];
+
+  const resultados = await Promise.all(
+    ofertas.map(async (oferta) => {
+      try {
+        return await buscarPorCampo(colecaoNome, "ofertaId", "==", oferta.id);
+      } catch (erro) {
+        console.warn(`Não foi possível buscar ${colecaoNome} da oferta ${oferta.id}.`, erro);
+        return [];
+      }
+    })
+  );
+
+  const mapa = new Map();
+  resultados.flat().forEach((item) => mapa.set(item.id, item));
+  return [...mapa.values()];
+}
+
 async function renderDashboard() {
   if (perfilAtual.tipo === TIPOS_USUARIO.COORDENADOR) {
     await carregarBaseAcademica();
@@ -345,8 +561,8 @@ async function renderDashboard() {
   if (perfilAtual.tipo === TIPOS_USUARIO.PROFESSOR) {
     await carregarBaseAcademica();
     const minhasOfertas = cache.ofertas.filter((oferta) => oferta.professorId === usuarioAtual.uid && oferta.ativa !== false);
-    const minhasMatriculas = await buscarPorCampo(COLECOES.matriculas, "professorId", "==", usuarioAtual.uid);
-    const minhasFrequencias = await buscarPorCampo(COLECOES.frequencias, "professorId", "==", usuarioAtual.uid);
+    const minhasMatriculas = await buscarRegistrosPorOfertas(COLECOES.matriculas, minhasOfertas);
+    const minhasFrequencias = await buscarRegistrosPorOfertas(COLECOES.frequencias, minhasOfertas);
     const idsOfertas = new Set(minhasOfertas.map((oferta) => oferta.id));
     const minhasAulas = cache.aulas.filter((aula) => idsOfertas.has(aula.ofertaId));
     const chamadasPendentes = minhasAulas.filter((aula) => aula.chamadaRealizada !== true).length;
@@ -628,7 +844,7 @@ async function renderUsuarios() {
   conteudo().innerHTML = `
     <section class="bloco">
       <div class="aviso">
-        Para criar professores e alunos, o sistema cria também uma conta no Firebase Authentication. Use uma senha inicial simples e peça ao usuário para trocar depois no painel do Firebase ou em uma versão futura do sistema.
+        Para criar professores e alunos, o sistema cria também uma conta no Firebase Authentication. Use uma senha inicial simples e peça ao usuário para trocar depois pelo botão <strong>Alterar senha</strong>, no topo do sistema.
       </div>
       <h2>Novo usuário</h2>
       <form id="form-usuario" class="form-grid">
@@ -641,8 +857,11 @@ async function renderUsuarios() {
           <input name="email" type="email" required placeholder="email@exemplo.com" />
         </div>
         <div>
-          <label>Senha inicial</label>
-          <input name="senha" type="password" minlength="6" required placeholder="Mínimo 6 caracteres" />
+          <label for="senha-novo-usuario">Senha inicial</label>
+          <div class="campo-senha">
+            <input id="senha-novo-usuario" name="senha" type="password" minlength="6" required placeholder="Mínimo 6 caracteres" />
+            <button class="botao-olho" type="button" data-toggle-senha="senha-novo-usuario" aria-label="Mostrar senha">👁</button>
+          </div>
         </div>
         <div>
           <label>Perfil</label>
@@ -707,6 +926,7 @@ async function renderUsuarios() {
         <table>
           <thead>
             <tr>
+              <th class="coluna-numero">Nº</th>
               <th>Nome</th>
               <th>E-mail</th>
               <th>Perfil</th>
@@ -722,12 +942,36 @@ async function renderUsuarios() {
   `;
 
   preencherSelect($("#curso-usuario"), cache.cursos, "Selecione o curso", "id", "nome");
+  configurarBotoesSenha(conteudo());
   $("#filtro-perfil-usuarios").value = filtrosIniciais.perfil;
   $("#filtro-status-usuarios").value = filtrosIniciais.status;
 
   function atualizarCampoCurso() {
     const tipo = $("#tipo-usuario").value;
     $("#campo-curso-aluno").style.display = tipo === TIPOS_USUARIO.ALUNO ? "block" : "none";
+  }
+
+  function prioridadePerfil(tipo) {
+    const ordem = {
+      [TIPOS_USUARIO.COORDENADOR]: 1,
+      [TIPOS_USUARIO.PROFESSOR]: 2,
+      [TIPOS_USUARIO.ALUNO]: 3
+    };
+    return ordem[tipo] || 99;
+  }
+
+  function ordenarUsuariosHierarquicoAlfabetico(usuarios) {
+    return [...usuarios].sort((a, b) => {
+      const diferencaPerfil = prioridadePerfil(a.tipo) - prioridadePerfil(b.tipo);
+      if (diferencaPerfil !== 0) return diferencaPerfil;
+
+      const nomeA = a.nome || "";
+      const nomeB = b.nome || "";
+      const diferencaNome = nomeA.localeCompare(nomeB, "pt-BR", { sensitivity: "base" });
+      if (diferencaNome !== 0) return diferencaNome;
+
+      return (a.email || "").localeCompare(b.email || "", "pt-BR", { sensitivity: "base" });
+    });
   }
 
   function obterUsuariosFiltrados() {
@@ -739,7 +983,7 @@ async function renderUsuarios() {
     sessionStorage.setItem("filtroUsuariosPerfil", perfil);
     sessionStorage.setItem("filtroUsuariosStatus", status);
 
-    return cache.usuarios.filter((usuario) => {
+    const filtrados = cache.usuarios.filter((usuario) => {
       const textoBusca = [usuario.nome, usuario.email, usuario.matricula, nomeCurso(usuario.cursoId)]
         .join(" ")
         .toLowerCase();
@@ -749,6 +993,8 @@ async function renderUsuarios() {
       const combinaStatus = !status || (status === "ativo" ? usuarioAtivo : !usuarioAtivo);
       return combinaBusca && combinaPerfil && combinaStatus;
     });
+
+    return ordenarUsuariosHierarquicoAlfabetico(filtrados);
   }
 
   function atualizarTabelaUsuarios() {
@@ -759,7 +1005,7 @@ async function renderUsuarios() {
     if (usuariosFiltrados.length === 0) {
       corpo.innerHTML = `
         <tr>
-          <td colspan="6">
+          <td colspan="7">
             <div class="estado-vazio estado-vazio-tabela">
               <strong>Nenhum usuário encontrado.</strong>
               <p>Tente mudar o texto da pesquisa, o perfil ou o status.</p>
@@ -770,8 +1016,15 @@ async function renderUsuarios() {
       return;
     }
 
-    corpo.innerHTML = usuariosFiltrados.map((usuario) => `
+    const totaisFiltrados = {
+      coordenadores: usuariosFiltrados.filter((usuario) => usuario.tipo === TIPOS_USUARIO.COORDENADOR).length,
+      professores: usuariosFiltrados.filter((usuario) => usuario.tipo === TIPOS_USUARIO.PROFESSOR).length,
+      alunos: usuariosFiltrados.filter((usuario) => usuario.tipo === TIPOS_USUARIO.ALUNO).length
+    };
+
+    const linhasUsuarios = usuariosFiltrados.map((usuario, indice) => `
       <tr>
+        <td class="coluna-numero">${indice + 1}</td>
         <td>${protegerTexto(usuario.nome)}</td>
         <td>${protegerTexto(usuario.email)}</td>
         <td><span class="badge badge-info">${protegerTexto(textoPerfil(usuario.tipo))}</span></td>
@@ -780,6 +1033,17 @@ async function renderUsuarios() {
         <td><span class="badge ${usuario.ativo === false ? "badge-muted" : "badge-success"}">${usuario.ativo === false ? "Inativo" : "Ativo"}</span></td>
       </tr>
     `).join("");
+
+    corpo.innerHTML = `${linhasUsuarios}
+      <tr class="linha-total">
+        <td></td>
+        <td><strong>Total</strong></td>
+        <td colspan="5">
+          <strong>${usuariosFiltrados.length} usuário(s) exibido(s)</strong>
+          <span class="detalhe-total">Coordenadores: ${totaisFiltrados.coordenadores} · Professores: ${totaisFiltrados.professores} · Alunos: ${totaisFiltrados.alunos}</span>
+        </td>
+      </tr>
+    `;
   }
 
   $("#tipo-usuario").addEventListener("change", atualizarCampoCurso);
@@ -975,8 +1239,24 @@ async function renderOfertas() {
 
   const professores = cache.usuarios.filter((usuario) => usuario.tipo === TIPOS_USUARIO.PROFESSOR && usuario.ativo !== false);
   const opcoesMatriz = cache.disciplinasCurso.map((item) => ({ id: item.id, nome: resumoDisciplinaCurso(item) }));
+  const gruposDuplicados = identificarOfertasDuplicadas();
+  const idsDuplicados = new Set(gruposDuplicados.flatMap((grupo) => grupo.duplicadas.map((oferta) => oferta.id)));
+  const avisoDuplicidade = gruposDuplicados.length ? `
+    <div class="alerta alerta-compacta">
+      <strong>Atenção:</strong> encontramos ${gruposDuplicados.reduce((total, grupo) => total + grupo.duplicadas.length, 0)} oferta(s) duplicada(s).
+      O sistema agora bloqueia novos cadastros repetidos. Para corrigir o que já existe, clique em
+      <button class="botao-link" type="button" data-acao="inativar-ofertas-duplicadas">inativar duplicadas</button>.
+    </div>
+  ` : "";
 
-  const linhas = cache.ofertas.map((oferta) => `
+  const linhas = cache.ofertas.map((oferta) => {
+    const status = oferta.ativa === false
+      ? '<span class="badge badge-muted">Inativa</span>'
+      : idsDuplicados.has(oferta.id)
+        ? '<span class="badge badge-warning">Duplicada</span>'
+        : '<span class="badge badge-success">Ativa</span>';
+
+    return `
     <tr>
       <td>${protegerTexto(nomeCurso(oferta.cursoId))}</td>
       <td>${protegerTexto(nomeDisciplina(oferta.disciplinaId))}</td>
@@ -984,13 +1264,15 @@ async function renderOfertas() {
       <td>${protegerTexto(oferta.periodoLetivo || "-")}</td>
       <td>${protegerTexto(professorDaOferta(oferta))}</td>
       <td>${formatarNumero(minimoFrequenciaOferta(oferta))}%</td>
-      <td><span class="badge ${oferta.ativa === false ? "badge-muted" : "badge-success"}">${oferta.ativa === false ? "Inativa" : "Ativa"}</span></td>
+      <td>${status}</td>
     </tr>
-  `);
+  `;
+  });
 
   conteudo().innerHTML = `
     <section class="bloco">
       <h2>Nova oferta</h2>
+      ${avisoDuplicidade}
       <form id="form-oferta" class="form-grid">
         <div>
           <label>Disciplina na matriz</label>
@@ -1024,6 +1306,32 @@ async function renderOfertas() {
   preencherSelect($("#oferta-disciplina-curso"), opcoesMatriz, "Selecione a disciplina", "id", "nome");
   preencherSelect($("#oferta-professor"), professores, "Selecione o professor", "id", "nome");
 
+  const botaoInativarDuplicadas = $("[data-acao='inativar-ofertas-duplicadas']");
+  if (botaoInativarDuplicadas) {
+    botaoInativarDuplicadas.addEventListener("click", async () => {
+      const duplicadas = identificarOfertasDuplicadas().flatMap((grupo) => grupo.duplicadas);
+      if (!duplicadas.length) {
+        mostrarMensagem("Não há ofertas duplicadas ativas.");
+        return;
+      }
+
+      const confirmar = confirm(`Encontramos ${duplicadas.length} oferta(s) duplicada(s). Deseja inativar as repetidas e manter apenas a primeira oferta de cada configuração?`);
+      if (!confirmar) return;
+
+      const lote = writeBatch(db);
+      duplicadas.forEach((oferta) => {
+        lote.update(doc(db, COLECOES.ofertas, oferta.id), {
+          ativa: false,
+          inativadaPorDuplicidade: true,
+          atualizadoEm: serverTimestamp()
+        });
+      });
+      await lote.commit();
+      mostrarMensagem("Ofertas duplicadas inativadas. As matrículas continuam preservadas nas ofertas originais.");
+      await renderOfertas();
+    });
+  }
+
   $("#form-oferta").addEventListener("submit", async (evento) => {
     evento.preventDefault();
     const dados = new FormData(evento.target);
@@ -1034,7 +1342,7 @@ async function renderOfertas() {
       return;
     }
 
-    await addDoc(collection(db, COLECOES.ofertas), {
+    const novaOferta = {
       cursoId: disciplinaCurso.cursoId,
       disciplinaCursoId: disciplinaCurso.id,
       disciplinaId: disciplinaCurso.disciplinaId,
@@ -1044,7 +1352,23 @@ async function renderOfertas() {
       frequenciaMinima: Number(dados.get("frequenciaMinima") || 75),
       ativa: true,
       criadoEm: serverTimestamp()
-    });
+    };
+
+    if (ofertaDuplicadaAtiva(novaOferta)) {
+      mostrarMensagem("Essa oferta já existe para a mesma disciplina, turma e período letivo. Para trocar professor ou frequência mínima, edite/inative a oferta existente em vez de cadastrar outra.", "alerta");
+      return;
+    }
+
+    const ofertaId = idOfertaUnica(novaOferta);
+    const referencia = doc(db, COLECOES.ofertas, ofertaId);
+    const ofertaExistente = await getDoc(referencia);
+
+    if (ofertaExistente.exists() && ofertaExistente.data().ativa !== false) {
+      mostrarMensagem("Essa oferta já está cadastrada. O sistema bloqueou a duplicidade.", "alerta");
+      return;
+    }
+
+    await setDoc(referencia, novaOferta, { merge: false });
 
     mostrarMensagem("Oferta criada com sucesso.");
     await renderOfertas();
@@ -1349,10 +1673,8 @@ async function renderNotas(coordenador = false) {
       matriculas = await buscarPorCampo(COLECOES.matriculas, "ofertaId", "==", ofertaSelecionadaId);
       notas = await buscarPorCampo(COLECOES.notas, "ofertaId", "==", ofertaSelecionadaId);
     } else {
-      const matriculasProfessor = await buscarPorCampo(COLECOES.matriculas, "professorId", "==", usuarioAtual.uid);
-      const notasProfessor = await buscarPorCampo(COLECOES.notas, "professorId", "==", usuarioAtual.uid);
-      matriculas = matriculasProfessor.filter((matricula) => matricula.ofertaId === ofertaSelecionadaId);
-      notas = notasProfessor.filter((nota) => nota.ofertaId === ofertaSelecionadaId);
+      matriculas = await buscarPorCampo(COLECOES.matriculas, "ofertaId", "==", ofertaSelecionadaId);
+      notas = await buscarPorCampo(COLECOES.notas, "ofertaId", "==", ofertaSelecionadaId);
     }
   }
   const notaPorMatricula = new Map(notas.map((nota) => [nota.matriculaId || nota.id, nota]));
@@ -1361,9 +1683,11 @@ async function renderNotas(coordenador = false) {
     const nota = notaPorMatricula.get(matricula.id) || {};
     const media = nota.media ?? matricula.mediaFinal ?? 0;
     const situacao = matricula.situacao || SITUACOES.CURSANDO;
+    const ofertaDaMatricula = cache.ofertas.find((oferta) => oferta.id === matricula.ofertaId);
+    const professorIdLinha = matricula.professorId || ofertaDaMatricula?.professorId || usuarioAtual.uid;
 
     return `
-      <tr data-matricula-id="${matricula.id}" data-aluno-id="${matricula.alunoId}" data-oferta-id="${matricula.ofertaId}" data-professor-id="${matricula.professorId}">
+      <tr data-matricula-id="${matricula.id}" data-aluno-id="${matricula.alunoId}" data-oferta-id="${matricula.ofertaId}" data-professor-id="${professorIdLinha}">
         <td>${protegerTexto(nomeUsuario(matricula.alunoId) || matricula.alunoNome)}</td>
         <td><input class="nota-input" data-campo="nota1" type="number" min="0" max="10" step="0.1" value="${nota.nota1 ?? ""}" /></td>
         <td><input class="nota-input" data-campo="nota2" type="number" min="0" max="10" step="0.1" value="${nota.nota2 ?? ""}" /></td>
@@ -1475,6 +1799,7 @@ async function salvarNotasDaTabela() {
 
     const matriculaRef = doc(db, COLECOES.matriculas, matriculaId);
     lote.update(matriculaRef, {
+      professorId,
       mediaFinal: media,
       percentualAproveitamento: percentual,
       situacao,
@@ -1642,9 +1967,8 @@ async function renderProfessorFrequencia() {
   let matriculas = [];
   let frequenciasOferta = [];
   if (ofertaSelecionadaId) {
-    const matriculasProfessor = await buscarPorCampo(COLECOES.matriculas, "professorId", "==", usuarioAtual.uid);
-    matriculas = matriculasProfessor.filter((matricula) => matricula.ofertaId === ofertaSelecionadaId);
-    frequenciasOferta = await buscarPorCampo(COLECOES.frequencias, "professorId", "==", usuarioAtual.uid);
+    matriculas = await buscarPorCampo(COLECOES.matriculas, "ofertaId", "==", ofertaSelecionadaId);
+    frequenciasOferta = await buscarPorCampo(COLECOES.frequencias, "ofertaId", "==", ofertaSelecionadaId);
   }
   const frequenciasDaOferta = frequenciasOferta.filter((frequencia) => frequencia.ofertaId === ofertaSelecionadaId);
   const frequenciasAula = frequenciasDaOferta.filter((frequencia) => frequencia.aulaId === aulaSelecionadaId);
@@ -1938,6 +2262,8 @@ async function renderAlunoProgresso() {
 }
 
 function configurarEventosGlobais() {
+  $("#botao-alterar-senha")?.addEventListener("click", abrirModalAlterarSenha);
+
   $("#botao-sair").addEventListener("click", async () => {
     await signOut(auth);
     window.location.href = "index.html";

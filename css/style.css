@@ -44,7 +44,7 @@ textarea {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px;
+  padding: 2px;
 }
 
 .login-card {
@@ -52,7 +52,7 @@ textarea {
   max-width: 440px;
   background: var(--cor-card);
   border-radius: 24px;
-  padding: 32px;
+  padding: 2px;
   box-shadow: var(--sombra);
 }
 
@@ -118,7 +118,7 @@ textarea {
   width: 100%;
   border: 1px solid var(--cor-borda);
   border-radius: 12px;
-  padding: 12px 14px;
+  padding: 2px 4px;
   outline: none;
   background: white;
   color: var(--cor-texto);
@@ -134,7 +134,7 @@ textarea:focus {
 .botao {
   border: 0;
   border-radius: 12px;
-  padding: 12px 16px;
+  padding: 2px;
   cursor: pointer;
   font-weight: 700;
   transition: 0.2s ease;

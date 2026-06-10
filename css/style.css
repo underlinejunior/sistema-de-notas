@@ -1002,3 +1002,78 @@ td select {
   max-width: 76%;
   max-height: 76%;
 }
+
+/* Destaque maior para logo personalizada */
+.marca-login {
+  flex-direction: column;
+  text-align: center;
+  gap: 18px;
+  margin-bottom: 26px;
+  padding-bottom: 22px;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.9);
+}
+
+.marca-login .marca-logo {
+  width: 112px;
+  height: 112px;
+  border-radius: 30px;
+  padding: 16px;
+  background:
+    radial-gradient(circle at 30% 25%, rgba(255, 255, 255, 0.28), transparent 32%),
+    linear-gradient(135deg, #1e3a8a, var(--cor-primaria) 48%, #2563eb);
+  box-shadow:
+    0 22px 42px rgba(37, 87, 214, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+}
+
+.marca-login .marca-logo img {
+  max-width: 100%;
+  max-height: 100%;
+  filter: drop-shadow(0 8px 16px rgba(15, 23, 42, 0.22));
+}
+
+.marca-login h1 {
+  font-size: clamp(1.9rem, 5vw, 2.35rem);
+  letter-spacing: -0.04em;
+}
+
+.marca-login p {
+  max-width: 330px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.sidebar-topo {
+  gap: 16px;
+}
+
+.sidebar-topo .marca-logo {
+  width: 58px;
+  height: 58px;
+  border-radius: 18px;
+  padding: 8px;
+  background:
+    radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.25), transparent 34%),
+    linear-gradient(135deg, #1e40af, var(--cor-primaria));
+  box-shadow: 0 14px 30px rgba(37, 87, 214, 0.28);
+}
+
+.sidebar-topo .marca-logo img {
+  max-width: 94%;
+  max-height: 94%;
+  filter: drop-shadow(0 5px 10px rgba(15, 23, 42, 0.2));
+}
+
+@media (max-width: 560px) {
+  .marca-login .marca-logo {
+    width: 92px;
+    height: 92px;
+    border-radius: 24px;
+    padding: 13px;
+  }
+
+  .marca-login h1 {
+    font-size: 1.8rem;
+  }
+}

@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Sistema de Notas | Painel</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" />
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
@@ -23,16 +24,18 @@
 
     <div class="conteudo-layout">
       <header class="topbar">
-        <button id="botao-menu-mobile" class="botao-menu" aria-label="Abrir menu">☰</button>
-        <div>
+        <button id="botao-menu-mobile" class="botao-menu" aria-label="Abrir menu" title="Abrir menu">
+          <i class="fa-solid fa-bars" aria-hidden="true"></i>
+        </button>
+        <div class="topbar-titulo">
           <h1 id="titulo-pagina">Painel</h1>
           <p id="subtitulo-pagina">Carregando suas informações...</p>
         </div>
         <div class="usuario-logado">
-          <span id="usuario-nome"></span>
-          <button id="botao-meu-perfil" class="botao botao-neutro" type="button">Meu perfil</button>
-          <button id="botao-alterar-senha" class="botao botao-secundario" type="button">Alterar senha</button>
-          <button id="botao-sair" class="botao botao-secundario">Sair</button>
+          <span id="usuario-nome" class="usuario-nome"><i class="fa-regular fa-circle-user" aria-hidden="true"></i><span></span></span>
+          <button id="botao-meu-perfil" class="botao botao-neutro" type="button"><i class="fa-regular fa-id-card" aria-hidden="true"></i><span>Meu perfil</span></button>
+          <button id="botao-alterar-senha" class="botao botao-secundario" type="button"><i class="fa-solid fa-key" aria-hidden="true"></i><span>Alterar senha</span></button>
+          <button id="botao-sair" class="botao botao-secundario" type="button"><i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i><span>Sair</span></button>
         </div>
       </header>
 

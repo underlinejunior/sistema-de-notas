@@ -63,30 +63,30 @@ const cache = {
 
 const menuPorPerfil = {
   coordenador: [
-    { rota: "dashboard", texto: "Painel inicial" },
-    { rota: "usuarios", texto: "Usuários" },
-    { rota: "cursos", texto: "Cursos" },
-    { rota: "disciplinas", texto: "Disciplinas" },
-    { rota: "matriz", texto: "Matriz e dependências" },
-    { rota: "ofertas", texto: "Ofertas de disciplinas" },
-    { rota: "matriculas", texto: "Matrículas e importação" },
-    { rota: "notas", texto: "Notas" },
-    { rota: "frequencia", texto: "Frequência" },
-    { rota: "meu-perfil", texto: "Meu perfil" }
+    { rota: "dashboard", texto: "Painel inicial", icone: "fa-solid fa-chart-line" },
+    { rota: "usuarios", texto: "Usuários", icone: "fa-solid fa-users" },
+    { rota: "cursos", texto: "Cursos", icone: "fa-solid fa-graduation-cap" },
+    { rota: "disciplinas", texto: "Disciplinas", icone: "fa-solid fa-book-open" },
+    { rota: "matriz", texto: "Matriz e dependências", icone: "fa-solid fa-diagram-project" },
+    { rota: "ofertas", texto: "Ofertas de disciplinas", icone: "fa-solid fa-calendar-days" },
+    { rota: "matriculas", texto: "Matrículas e importação", icone: "fa-solid fa-user-graduate" },
+    { rota: "notas", texto: "Notas", icone: "fa-solid fa-file-pen" },
+    { rota: "frequencia", texto: "Frequência", icone: "fa-solid fa-clipboard-user" },
+    { rota: "meu-perfil", texto: "Meu perfil", icone: "fa-regular fa-id-card" }
   ],
   professor: [
-    { rota: "dashboard", texto: "Painel inicial" },
-    { rota: "professor-ofertas", texto: "Minhas disciplinas" },
-    { rota: "professor-notas", texto: "Lançar notas" },
-    { rota: "professor-frequencia", texto: "Frequência" },
-    { rota: "meu-perfil", texto: "Meu perfil" }
+    { rota: "dashboard", texto: "Painel inicial", icone: "fa-solid fa-chart-line" },
+    { rota: "professor-ofertas", texto: "Minhas disciplinas", icone: "fa-solid fa-book-open-reader" },
+    { rota: "professor-notas", texto: "Lançar notas", icone: "fa-solid fa-file-pen" },
+    { rota: "professor-frequencia", texto: "Frequência", icone: "fa-solid fa-clipboard-user" },
+    { rota: "meu-perfil", texto: "Meu perfil", icone: "fa-regular fa-id-card" }
   ],
   aluno: [
-    { rota: "dashboard", texto: "Painel inicial" },
-    { rota: "aluno-notas", texto: "Minhas notas" },
-    { rota: "aluno-frequencia", texto: "Minha frequência" },
-    { rota: "aluno-progresso", texto: "Meu progresso" },
-    { rota: "meu-perfil", texto: "Meu perfil" }
+    { rota: "dashboard", texto: "Painel inicial", icone: "fa-solid fa-chart-line" },
+    { rota: "aluno-notas", texto: "Minhas notas", icone: "fa-solid fa-square-poll-vertical" },
+    { rota: "aluno-frequencia", texto: "Minha frequência", icone: "fa-solid fa-calendar-check" },
+    { rota: "aluno-progresso", texto: "Meu progresso", icone: "fa-solid fa-route" },
+    { rota: "meu-perfil", texto: "Meu perfil", icone: "fa-regular fa-id-card" }
   ]
 };
 
@@ -94,8 +94,17 @@ function conteudo() {
   return $("#conteudo");
 }
 
+function iconeDaRota(rota = rotaAtual) {
+  const itens = Object.values(menuPorPerfil).flat();
+  return itens.find((item) => item.rota === rota)?.icone || "fa-solid fa-circle-info";
+}
+
 function definirTitulo(titulo, subtitulo = "") {
-  $("#titulo-pagina").textContent = titulo;
+  const tituloPagina = $("#titulo-pagina");
+  if (tituloPagina) {
+    const icone = titulo === "Erro" ? "fa-solid fa-triangle-exclamation" : iconeDaRota();
+    tituloPagina.innerHTML = `<span class="titulo-pagina-icone"><i class="${icone}" aria-hidden="true"></i></span><span>${protegerTexto(titulo)}</span>`;
+  }
   $("#subtitulo-pagina").textContent = subtitulo;
 }
 
@@ -106,6 +115,124 @@ function textoPerfil(tipo) {
     aluno: "Aluno"
   };
   return mapa[tipo] || "Usuário";
+}
+
+function atualizarNomeUsuario(nome) {
+  const area = $("#usuario-nome");
+  if (!area) return;
+  let texto = area.querySelector("span");
+  if (!texto) {
+    area.innerHTML = '<i class="fa-regular fa-circle-user" aria-hidden="true"></i><span></span>';
+    texto = area.querySelector("span");
+  }
+  texto.textContent = nome || "Usuário";
+}
+
+const iconesAcoes = [
+  [/salvando|carregando|corrigindo|enviando/i, "fa-solid fa-spinner fa-spin"],
+  [/entrar/i, "fa-solid fa-right-to-bracket"],
+  [/esqueci|redefini/i, "fa-solid fa-key"],
+  [/cadastrar.*usu|criar.*usu/i, "fa-solid fa-user-plus"],
+  [/matricular|matrícula/i, "fa-solid fa-user-graduate"],
+  [/importar/i, "fa-solid fa-file-import"],
+  [/lançar notas|salvar notas/i, "fa-solid fa-file-pen"],
+  [/frequência|chamada/i, "fa-solid fa-clipboard-user"],
+  [/disciplina/i, "fa-solid fa-book-open"],
+  [/curso/i, "fa-solid fa-graduation-cap"],
+  [/dependência|matriz/i, "fa-solid fa-diagram-project"],
+  [/oferta/i, "fa-solid fa-calendar-days"],
+  [/editar|alterar/i, "fa-solid fa-pen-to-square"],
+  [/salvar/i, "fa-solid fa-floppy-disk"],
+  [/cancelar matrícula/i, "fa-solid fa-user-xmark"],
+  [/cancelar/i, "fa-solid fa-xmark"],
+  [/reativar/i, "fa-solid fa-rotate-left"],
+  [/inativar|bloquear/i, "fa-solid fa-ban"],
+  [/excluir|remover/i, "fa-solid fa-trash"],
+  [/corrigir/i, "fa-solid fa-screwdriver-wrench"],
+  [/adicionar|novo|nova/i, "fa-solid fa-plus"],
+  [/ver progresso|progresso/i, "fa-solid fa-route"],
+  [/ver frequência/i, "fa-solid fa-calendar-check"],
+  [/ver notas/i, "fa-solid fa-square-poll-vertical"],
+  [/ver disciplinas/i, "fa-solid fa-book-open-reader"],
+  [/meu perfil/i, "fa-regular fa-id-card"],
+  [/sair/i, "fa-solid fa-right-from-bracket"],
+  [/voltar/i, "fa-solid fa-arrow-left"],
+  [/pesquisar|buscar/i, "fa-solid fa-magnifying-glass"]
+];
+
+const iconesSecoes = [
+  [/usuário|aluno|professor/i, "fa-solid fa-users"],
+  [/curso/i, "fa-solid fa-graduation-cap"],
+  [/disciplina/i, "fa-solid fa-book-open"],
+  [/matriz|dependência/i, "fa-solid fa-diagram-project"],
+  [/oferta|período/i, "fa-solid fa-calendar-days"],
+  [/matrícula|importação/i, "fa-solid fa-user-graduate"],
+  [/nota|desempenho/i, "fa-solid fa-file-pen"],
+  [/frequência|chamada|aula/i, "fa-solid fa-clipboard-user"],
+  [/progresso/i, "fa-solid fa-route"],
+  [/perfil/i, "fa-regular fa-id-card"],
+  [/resumo|visão|painel/i, "fa-solid fa-chart-line"],
+  [/alerta|correção/i, "fa-solid fa-triangle-exclamation"],
+  [/como|orientação|ordem/i, "fa-solid fa-circle-info"]
+];
+
+const iconesCards = [
+  [/usuário|aluno|professor/i, "fa-solid fa-users"],
+  [/curso/i, "fa-solid fa-graduation-cap"],
+  [/disciplina|oferta/i, "fa-solid fa-book-open"],
+  [/matrícula/i, "fa-solid fa-user-graduate"],
+  [/nota|média|aproveitamento/i, "fa-solid fa-square-poll-vertical"],
+  [/frequência|chamada|aula|horas/i, "fa-solid fa-calendar-check"],
+  [/progresso|aprovad/i, "fa-solid fa-route"],
+  [/alerta|reprovad/i, "fa-solid fa-triangle-exclamation"],
+  [/cursando/i, "fa-solid fa-person-chalkboard"]
+];
+
+function localizarIcone(texto, mapa, padrao = "fa-solid fa-circle-info") {
+  return mapa.find(([expressao]) => expressao.test(texto))?.[1] || padrao;
+}
+
+function aplicarIconesInterface(raiz = document) {
+  $$(".botao, .link-esqueceu-senha", raiz).forEach((botao) => {
+    if (botao.classList.contains("botao-olho") || botao.querySelector("i")) return;
+    const texto = botao.textContent.trim();
+    if (!texto) return;
+    const icone = localizarIcone(texto, iconesAcoes, "fa-solid fa-circle-arrow-right");
+    botao.insertAdjacentHTML("afterbegin", `<i class="${icone} icone-botao" aria-hidden="true"></i>`);
+  });
+
+  $$(".bloco h2, .bloco h3, .modal-card h2, .painel-guia h2", raiz).forEach((titulo) => {
+    if (titulo.querySelector("i")) return;
+    const icone = localizarIcone(titulo.textContent.trim(), iconesSecoes);
+    titulo.classList.add("titulo-secao");
+    titulo.insertAdjacentHTML("afterbegin", `<i class="${icone}" aria-hidden="true"></i>`);
+  });
+
+  $$(".card", raiz).forEach((card) => {
+    if (card.querySelector(":scope > .card-icone")) return;
+    const rotulo = card.querySelector("span")?.textContent?.trim() || "";
+    const icone = localizarIcone(rotulo, iconesCards);
+    card.insertAdjacentHTML("afterbegin", `<span class="card-icone" aria-hidden="true"><i class="${icone}"></i></span>`);
+  });
+
+  $$(".badge", raiz).forEach((badge) => {
+    if (badge.querySelector("i")) return;
+    const texto = badge.textContent.trim();
+    let icone = "fa-solid fa-circle-info";
+    if (/aprovad|ativ|regular|presente/i.test(texto)) icone = "fa-solid fa-circle-check";
+    else if (/reprovad|cancelad|falta|abaixo/i.test(texto)) icone = "fa-solid fa-circle-xmark";
+    else if (/cursando|andamento/i.test(texto)) icone = "fa-solid fa-clock";
+    else if (/dependência|pendente|aguardando/i.test(texto)) icone = "fa-solid fa-triangle-exclamation";
+    badge.insertAdjacentHTML("afterbegin", `<i class="${icone}" aria-hidden="true"></i>`);
+  });
+}
+
+function iniciarObservadorIcones() {
+  aplicarIconesInterface(document);
+  const observador = new MutationObserver(() => {
+    window.requestAnimationFrame(() => aplicarIconesInterface(document));
+  });
+  observador.observe(document.body, { childList: true, subtree: true });
 }
 
 function configurarBotoesSenha(raiz = document) {
@@ -119,7 +246,7 @@ function configurarBotoesSenha(raiz = document) {
 
       const mostrar = campo.type === "password";
       campo.type = mostrar ? "text" : "password";
-      botao.textContent = mostrar ? "🙈" : "👁";
+      botao.innerHTML = mostrar ? '<i class="fa-regular fa-eye-slash" aria-hidden="true"></i>' : '<i class="fa-regular fa-eye" aria-hidden="true"></i>';
       botao.setAttribute("aria-label", mostrar ? "Ocultar senha" : "Mostrar senha");
     });
   });
@@ -155,19 +282,19 @@ function abrirModalAlterarSenha() {
           <label for="senha-atual">Senha atual</label>
           <div class="campo-senha">
             <input id="senha-atual" name="senhaAtual" type="password" autocomplete="current-password" required placeholder="Digite sua senha atual" />
-            <button class="botao-olho" type="button" data-toggle-senha="senha-atual" aria-label="Mostrar senha">👁</button>
+            <button class="botao-olho" type="button" data-toggle-senha="senha-atual" aria-label="Mostrar senha"><i class="fa-regular fa-eye" aria-hidden="true"></i></button>
           </div>
 
           <label for="nova-senha">Nova senha</label>
           <div class="campo-senha">
             <input id="nova-senha" name="novaSenha" type="password" autocomplete="new-password" minlength="6" required placeholder="Mínimo 6 caracteres" />
-            <button class="botao-olho" type="button" data-toggle-senha="nova-senha" aria-label="Mostrar senha">👁</button>
+            <button class="botao-olho" type="button" data-toggle-senha="nova-senha" aria-label="Mostrar senha"><i class="fa-regular fa-eye" aria-hidden="true"></i></button>
           </div>
 
           <label for="confirmar-nova-senha">Confirmar nova senha</label>
           <div class="campo-senha">
             <input id="confirmar-nova-senha" name="confirmarSenha" type="password" autocomplete="new-password" minlength="6" required placeholder="Repita a nova senha" />
-            <button class="botao-olho" type="button" data-toggle-senha="confirmar-nova-senha" aria-label="Mostrar senha">👁</button>
+            <button class="botao-olho" type="button" data-toggle-senha="confirmar-nova-senha" aria-label="Mostrar senha"><i class="fa-regular fa-eye" aria-hidden="true"></i></button>
           </div>
 
           <div id="alerta-alterar-senha" class="alerta" hidden></div>
@@ -405,7 +532,8 @@ function renderizarMenu() {
 
   menu.innerHTML = itens.map((item) => `
     <button type="button" data-rota="${item.rota}" class="${item.rota === rotaAtual ? "ativo" : ""}">
-      ${protegerTexto(item.texto)}
+      <i class="${item.icone}" aria-hidden="true"></i>
+      <span>${protegerTexto(item.texto)}</span>
     </button>
   `).join("");
 
@@ -526,7 +654,7 @@ async function renderDashboard() {
           <h2>Olá, ${protegerTexto(perfilAtual.nome || "coordenador")}.</h2>
           <p>Comece pelos cadastros básicos, depois crie as ofertas, matricule os alunos, configure os dias de aula e acompanhe notas e frequência.</p>
         </div>
-        <div class="acoes">
+        <div class="acoes atalhos-painel">
           <button class="botao botao-primario" data-ir="usuarios">Cadastrar usuários</button>
           <button class="botao botao-secundario" data-ir="matriculas">Matricular alunos</button>
           <button class="botao botao-secundario" data-ir="frequencia">Configurar frequência</button>
@@ -620,7 +748,7 @@ async function renderDashboard() {
           <h2>Olá, ${protegerTexto(perfilAtual.nome || "professor")}.</h2>
           <p>Você visualiza apenas as disciplinas em que foi definido como professor responsável. Use os atalhos abaixo para lançar notas ou fazer a chamada.</p>
         </div>
-        <div class="acoes">
+        <div class="acoes atalhos-painel">
           <button class="botao botao-primario" data-ir="professor-notas">Lançar notas</button>
           <button class="botao botao-secundario" data-ir="professor-frequencia">Fazer frequência</button>
           <button class="botao botao-secundario" data-ir="professor-ofertas">Ver disciplinas</button>
@@ -715,7 +843,7 @@ async function renderAlunoResumo() {
         <h2>Olá, ${protegerTexto(perfilAtual.nome || "aluno")}.</h2>
         <p>Aqui você acompanha somente suas informações: disciplinas, professores, notas, frequência e progresso no curso.</p>
       </div>
-      <div class="acoes">
+      <div class="acoes atalhos-painel atalhos-aluno">
         <button class="botao botao-primario" data-ir="aluno-notas">Ver notas</button>
         <button class="botao botao-secundario" data-ir="aluno-frequencia">Ver frequência</button>
         <button class="botao botao-secundario" data-ir="aluno-progresso">Ver progresso</button>
@@ -1009,7 +1137,7 @@ async function salvarEdicaoUsuario(evento) {
 
     if (usuarioId === usuarioAtual.uid) {
       perfilAtual = { ...perfilAtual, ...alteracoes };
-      $("#usuario-nome").textContent = nome;
+      atualizarNomeUsuario(nome);
       $("#perfil-label").textContent = textoPerfil(tipo);
     }
 
@@ -1063,14 +1191,14 @@ async function renderMeuPerfil() {
         <div class="campo-largo">
           <label>E-mail de acesso</label>
           <input name="email" type="email" required value="${protegerTexto(emailSugerido)}" />
-          <small class="texto-ajuda">Ao alterar o e-mail, ele também será atualizado no Firebase Authentication e passará a ser usado no próximo login.</small>
+          <small class="texto-ajuda">Ao alterar o e-mail, ele passará a ser usado no próximo acesso ao sistema.</small>
         </div>
 
         <div id="grupo-senha-confirmar-email" class="campo-largo" ${emailSugerido === emailAtual ? "hidden" : ""}>
           <label for="senha-confirmar-email">Senha atual para confirmar a troca do e-mail</label>
           <div class="campo-senha">
             <input id="senha-confirmar-email" name="senhaAtual" type="password" autocomplete="current-password" placeholder="Informe sua senha atual" />
-            <button class="botao-olho" type="button" data-toggle-senha="senha-confirmar-email" aria-label="Mostrar senha">👁</button>
+            <button class="botao-olho" type="button" data-toggle-senha="senha-confirmar-email" aria-label="Mostrar senha"><i class="fa-regular fa-eye" aria-hidden="true"></i></button>
           </div>
         </div>
 
@@ -1157,7 +1285,7 @@ async function salvarMeuPerfil(evento) {
     };
     const indice = cache.usuarios.findIndex((item) => item.id === usuarioAtual.uid);
     if (indice >= 0) cache.usuarios[indice] = { ...cache.usuarios[indice], ...perfilAtual };
-    $("#usuario-nome").textContent = nome;
+    atualizarNomeUsuario(nome);
     mostrarMensagem("Perfil atualizado com sucesso.");
     await renderMeuPerfil();
   } catch (erro) {
@@ -1196,7 +1324,7 @@ async function renderUsuarios() {
   conteudo().innerHTML = `
     <section class="bloco">
       <div class="aviso">
-        Para criar professores e alunos, o sistema cria também uma conta no Firebase Authentication. Use uma senha inicial simples e peça ao usuário para trocar depois pelo botão <strong>Alterar senha</strong>, no topo do sistema.
+        Ao cadastrar professores e alunos, defina uma senha inicial e oriente o usuário a alterá-la no primeiro acesso pelo botão <strong>Alterar senha</strong>.
       </div>
       <h2>Novo usuário</h2>
       <form id="form-usuario" class="form-grid">
@@ -1212,7 +1340,7 @@ async function renderUsuarios() {
           <label for="senha-novo-usuario">Senha inicial</label>
           <div class="campo-senha">
             <input id="senha-novo-usuario" name="senha" type="password" minlength="6" required placeholder="Mínimo 6 caracteres" />
-            <button class="botao-olho" type="button" data-toggle-senha="senha-novo-usuario" aria-label="Mostrar senha">👁</button>
+            <button class="botao-olho" type="button" data-toggle-senha="senha-novo-usuario" aria-label="Mostrar senha"><i class="fa-regular fa-eye" aria-hidden="true"></i></button>
           </div>
         </div>
         <div>
@@ -2738,10 +2866,11 @@ onAuthStateChanged(auth, async (usuario) => {
     return;
   }
 
-  $("#usuario-nome").textContent = perfilAtual.nome || usuario.email;
+  atualizarNomeUsuario(perfilAtual.nome || usuario.email);
   $("#perfil-label").textContent = textoPerfil(perfilAtual.tipo);
 
   configurarEventosGlobais();
+  iniciarObservadorIcones();
   renderizarMenu();
   await navegar("dashboard");
 });

@@ -55,7 +55,7 @@ async function entrar(evento) {
   }
 
   botaoEntrar.disabled = true;
-  botaoEntrar.textContent = "Entrando...";
+  botaoEntrar.innerHTML = '<i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i><span>Entrando...</span>';
 
   try {
     const credencial = await signInWithEmailAndPassword(auth, email, senha);
@@ -79,7 +79,7 @@ async function entrar(evento) {
     mostrarAlerta("Não foi possível entrar. Confira o e-mail e a senha.");
   } finally {
     botaoEntrar.disabled = false;
-    botaoEntrar.textContent = "Entrar no sistema";
+    botaoEntrar.innerHTML = '<i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i><span>Entrar no sistema</span>';
   }
 }
 
@@ -94,7 +94,7 @@ async function enviarRedefinicaoSenha() {
   }
 
   botaoEsqueciSenha.disabled = true;
-  botaoEsqueciSenha.textContent = "Enviando link...";
+  botaoEsqueciSenha.innerHTML = '<i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i><span>Enviando link...</span>';
 
   try {
     await sendPasswordResetEmail(auth, email);
@@ -104,7 +104,7 @@ async function enviarRedefinicaoSenha() {
     mostrarAlerta("Não foi possível enviar o link de redefinição. Confira se o e-mail está correto e se ele foi cadastrado no sistema.");
   } finally {
     botaoEsqueciSenha.disabled = false;
-    botaoEsqueciSenha.textContent = "Esqueci minha senha";
+    botaoEsqueciSenha.innerHTML = '<i class="fa-solid fa-key" aria-hidden="true"></i><span>Esqueci minha senha</span>';
   }
 }
 
@@ -112,7 +112,7 @@ function alternarSenhaLogin() {
   if (!campoSenha || !botaoToggleSenha) return;
   const deveMostrar = campoSenha.type === "password";
   campoSenha.type = deveMostrar ? "text" : "password";
-  botaoToggleSenha.textContent = deveMostrar ? "🙈" : "👁";
+  botaoToggleSenha.innerHTML = deveMostrar ? '<i class="fa-regular fa-eye-slash" aria-hidden="true"></i>' : '<i class="fa-regular fa-eye" aria-hidden="true"></i>';
   botaoToggleSenha.setAttribute("aria-label", deveMostrar ? "Ocultar senha" : "Mostrar senha");
   botaoToggleSenha.setAttribute("title", deveMostrar ? "Ocultar senha" : "Mostrar senha");
   campoSenha.focus();

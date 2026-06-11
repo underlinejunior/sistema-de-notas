@@ -4,44 +4,72 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Sistema de Notas | Login</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" />
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body class="pagina-login">
   <main class="login-container">
-    <section class="login-card">
-      <div class="marca marca-login">
-        <div class="marca-icone marca-logo">
-          <img src="assets/logo.png" alt="Logo do sistema" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline';" />
-          <span>SN</span>
-        </div>
-        <div>
-          <h1>Sistema de Notas</h1>
-        </div>
-      </div>
-
-      <div id="alerta-login" class="alerta" hidden></div>
-      <div id="sucesso-login" class="alerta alerta-sucesso" hidden></div>
-
-      <form id="form-login" class="formulario formulario-login">
-        <label for="email">E-mail</label>
-        <input id="email" type="email" autocomplete="email" placeholder="email cadastrado na inscrição" required />
-
-        <label for="senha">Senha</label>
-        <div class="campo-senha">
-          <input id="senha" type="password" autocomplete="current-password" placeholder="telefone com DDD, somente números" required />
-          <button id="toggle-senha-login" class="botao-olho" type="button" aria-label="Mostrar senha" title="Mostrar senha">👁</button>
+    <section class="login-card login-card-profissional">
+      <aside class="login-identidade">
+        <div class="marca marca-login marca-login-profissional">
+          <div class="marca-icone marca-logo login-logo-destaque">
+            <img src="assets/logo.png" alt="Logo do sistema" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline';" />
+            <span>SN</span>
+          </div>
+          <div class="login-marca-texto">
+            <h1>Sistema de Notas</h1>
+            <p>Acompanhe notas, frequência e progresso acadêmico em um só lugar.</p>
+          </div>
         </div>
 
-        <button id="botao-entrar" class="botao botao-primario" type="submit">Entrar no sistema</button>
-        <button id="botao-esqueci-senha" class="link-esqueceu-senha" type="button">Esqueci minha senha</button>
-      </form>
+        <div class="login-beneficios" aria-label="Recursos do sistema">
+          <div><i class="fa-solid fa-graduation-cap" aria-hidden="true"></i><span>Informações acadêmicas organizadas</span></div>
+          <div><i class="fa-solid fa-chart-line" aria-hidden="true"></i><span>Acompanhamento de desempenho</span></div>
+          <div><i class="fa-solid fa-shield-halved" aria-hidden="true"></i><span>Acesso individual e protegido</span></div>
+        </div>
+      </aside>
 
-      <div class="ajuda-login">
-        <strong>Como acessar:</strong>
-        <p><strong>Usuário:</strong> use o e-mail informado na inscrição do curso.</p>
-        <p><strong>Senha inicial:</strong> use o telefone informado na inscrição, com DDD e somente números.</p>
-        <p class="texto-miudo">Exemplo: se o telefone informado foi (86) 99999-9999, digite <code>86999999999</code>.</p>
-      </div>
+      <section class="login-conteudo">
+        <header class="login-cabecalho">
+          <span class="login-etiqueta"><i class="fa-solid fa-lock" aria-hidden="true"></i> Acesso ao sistema</span>
+          <h2>Entre na sua conta</h2>
+          <p>Use os dados informados na inscrição do curso.</p>
+        </header>
+
+        <div id="alerta-login" class="alerta" hidden></div>
+        <div id="sucesso-login" class="alerta alerta-sucesso" hidden></div>
+
+        <div class="login-area-principal">
+          <div class="login-formulario-coluna">
+            <form id="form-login" class="formulario formulario-login">
+              <label for="email"><i class="fa-regular fa-envelope" aria-hidden="true"></i> E-mail</label>
+              <div class="campo-com-icone">
+                <i class="fa-regular fa-envelope" aria-hidden="true"></i>
+                <input id="email" type="email" autocomplete="email" placeholder="e-mail cadastrado na inscrição" required />
+              </div>
+
+              <label for="senha"><i class="fa-solid fa-key" aria-hidden="true"></i> Senha</label>
+              <div class="campo-senha campo-com-icone">
+                <i class="fa-solid fa-key" aria-hidden="true"></i>
+                <input id="senha" type="password" autocomplete="current-password" placeholder="telefone com DDD, somente números" required />
+                <button id="toggle-senha-login" class="botao-olho" type="button" aria-label="Mostrar senha" title="Mostrar senha">
+                  <i class="fa-regular fa-eye" aria-hidden="true"></i>
+                </button>
+              </div>
+
+              <button id="botao-entrar" class="botao botao-primario botao-login" type="submit">
+                <i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i>
+                <span>Entrar no sistema</span>
+              </button>
+              <button id="botao-esqueci-senha" class="link-esqueceu-senha" type="button">
+                <i class="fa-solid fa-key" aria-hidden="true"></i>
+                <span>Esqueci minha senha</span>
+              </button>
+            </form>
+          </div>
+
+        </div>
+      </section>
     </section>
   </main>
 

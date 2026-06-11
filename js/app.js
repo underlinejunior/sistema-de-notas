@@ -6,7 +6,8 @@ import {
   createUserWithEmailAndPassword,
   EmailAuthProvider,
   reauthenticateWithCredential,
-  updatePassword
+  updatePassword,
+  updateEmail
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 import {
   collection,
@@ -70,19 +71,22 @@ const menuPorPerfil = {
     { rota: "ofertas", texto: "Ofertas de disciplinas" },
     { rota: "matriculas", texto: "Matrículas e importação" },
     { rota: "notas", texto: "Notas" },
-    { rota: "frequencia", texto: "Frequência" }
+    { rota: "frequencia", texto: "Frequência" },
+    { rota: "meu-perfil", texto: "Meu perfil" }
   ],
   professor: [
     { rota: "dashboard", texto: "Painel inicial" },
     { rota: "professor-ofertas", texto: "Minhas disciplinas" },
     { rota: "professor-notas", texto: "Lançar notas" },
-    { rota: "professor-frequencia", texto: "Frequência" }
+    { rota: "professor-frequencia", texto: "Frequência" },
+    { rota: "meu-perfil", texto: "Meu perfil" }
   ],
   aluno: [
     { rota: "dashboard", texto: "Painel inicial" },
     { rota: "aluno-notas", texto: "Minhas notas" },
     { rota: "aluno-frequencia", texto: "Minha frequência" },
-    { rota: "aluno-progresso", texto: "Meu progresso" }
+    { rota: "aluno-progresso", texto: "Meu progresso" },
+    { rota: "meu-perfil", texto: "Meu perfil" }
   ]
 };
 
@@ -436,6 +440,7 @@ async function navegar(rota) {
     else if (rotaAtual === "aluno-notas") await renderAlunoNotas();
     else if (rotaAtual === "aluno-frequencia") await renderAlunoFrequencia();
     else if (rotaAtual === "aluno-progresso") await renderAlunoProgresso();
+    else if (rotaAtual === "meu-perfil") await renderMeuPerfil();
   } catch (erro) {
     console.error(erro);
     definirTitulo("Erro", "Não foi possível carregar esta área.");
@@ -841,6 +846,337 @@ async function renderDisciplinas() {
   });
 }
 
+
+function fecharModalEditarUsuario() {
+  const modal = $("#modal-editar-usuario");
+  if (modal) modal.remove();
+}
+
+function abrirModalEditarUsuario(usuarioId) {
+  fecharModalEditarUsuario();
+  const usuario = cache.usuarios.find((item) => item.id === usuarioId);
+  if (!usuario) {
+    mostrarMensagem("Usuário não encontrado.", "erro");
+    return;
+  }
+
+  const editandoProprioCadastro = usuario.id === usuarioAtual.uid;
+
+  const opcoesCurso = cache.cursos
+    .filter((curso) => curso.ativo !== false || curso.id === usuario.cursoId)
+    .sort((a, b) => String(a.nome || "").localeCompare(String(b.nome || ""), "pt-BR", { sensitivity: "base" }))
+    .map((curso) => `<option value="${protegerTexto(curso.id)}" ${curso.id === usuario.cursoId ? "selected" : ""}>${protegerTexto(curso.nome)}</option>`)
+    .join("");
+
+  document.body.insertAdjacentHTML("beforeend", `
+    <div id="modal-editar-usuario" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="titulo-modal-editar-usuario">
+      <section class="modal-card modal-card-largo">
+        <div class="modal-topo">
+          <div>
+            <h2 id="titulo-modal-editar-usuario">Editar usuário</h2>
+            <p>Atualize os dados cadastrais de ${protegerTexto(usuario.nome || "usuário")}.</p>
+          </div>
+          <button type="button" class="modal-fechar" data-fechar-editar-usuario aria-label="Fechar">×</button>
+        </div>
+
+        <form id="form-editar-usuario" class="form-grid">
+          <input type="hidden" name="usuarioId" value="${protegerTexto(usuario.id)}" />
+
+          <div class="campo-largo">
+            <label>Nome completo</label>
+            <input name="nome" required value="${protegerTexto(usuario.nome || "")}" />
+          </div>
+
+          <div class="campo-largo">
+            <label>Novo e-mail</label>
+            <input name="email" type="email" required value="${protegerTexto(usuario.emailPendente || usuario.email || "")}" />
+            <small class="texto-ajuda">E-mail atual de acesso: <strong>${protegerTexto(usuario.email || "Não informado")}</strong>. Se houver alteração, o usuário deverá confirmá-la em <strong>Meu perfil</strong> usando a senha atual.</small>
+          </div>
+
+          <div>
+            <label>Perfil</label>
+            <select name="tipo" id="editar-tipo-usuario" required ${editandoProprioCadastro ? "disabled" : ""}>
+              <option value="coordenador" ${usuario.tipo === TIPOS_USUARIO.COORDENADOR ? "selected" : ""}>Coordenador</option>
+              <option value="professor" ${usuario.tipo === TIPOS_USUARIO.PROFESSOR ? "selected" : ""}>Professor</option>
+              <option value="aluno" ${usuario.tipo === TIPOS_USUARIO.ALUNO ? "selected" : ""}>Aluno</option>
+            </select>
+            ${editandoProprioCadastro ? `<input type="hidden" name="tipo" value="${protegerTexto(usuario.tipo)}" /><small class="texto-ajuda">Para evitar bloqueio do sistema, você não pode alterar o próprio perfil de acesso nesta tela.</small>` : ""}
+          </div>
+
+          <div>
+            <label>Matrícula</label>
+            <input name="matricula" value="${protegerTexto(usuario.matricula || "")}" placeholder="Opcional" />
+          </div>
+
+          <div id="editar-campo-curso-aluno">
+            <label>Curso do aluno</label>
+            <select name="cursoId" id="editar-curso-usuario">
+              <option value="">Selecione o curso</option>
+              ${opcoesCurso}
+            </select>
+          </div>
+
+          <div>
+            <label>Status</label>
+            <select name="ativo" ${editandoProprioCadastro ? "disabled" : ""}>
+              <option value="true" ${usuario.ativo !== false ? "selected" : ""}>Ativo</option>
+              <option value="false" ${usuario.ativo === false ? "selected" : ""}>Inativo</option>
+            </select>
+            ${editandoProprioCadastro ? `<input type="hidden" name="ativo" value="${usuario.ativo !== false ? "true" : "false"}" /><small class="texto-ajuda">O próprio coordenador não pode inativar a própria conta.</small>` : ""}
+          </div>
+
+          <div class="acoes modal-acoes campo-largo">
+            <button type="button" class="botao botao-secundario" data-fechar-editar-usuario>Cancelar</button>
+            <button id="botao-salvar-edicao-usuario" type="submit" class="botao botao-primario">Salvar alterações</button>
+          </div>
+        </form>
+      </section>
+    </div>
+  `);
+
+  const modal = $("#modal-editar-usuario");
+  const tipo = $("#editar-tipo-usuario");
+  const campoCurso = $("#editar-campo-curso-aluno");
+
+  const atualizarCurso = () => {
+    campoCurso.style.display = tipo.value === TIPOS_USUARIO.ALUNO ? "block" : "none";
+  };
+  tipo.addEventListener("change", atualizarCurso);
+  atualizarCurso();
+
+  $$('[data-fechar-editar-usuario]', modal).forEach((botao) => botao.addEventListener("click", fecharModalEditarUsuario));
+  modal.addEventListener("click", (evento) => {
+    if (evento.target === modal) fecharModalEditarUsuario();
+  });
+
+  $("#form-editar-usuario").addEventListener("submit", salvarEdicaoUsuario);
+}
+
+async function salvarEdicaoUsuario(evento) {
+  evento.preventDefault();
+  const dados = new FormData(evento.target);
+  const usuarioId = String(dados.get("usuarioId") || "");
+  const usuario = cache.usuarios.find((item) => item.id === usuarioId);
+  const botao = $("#botao-salvar-edicao-usuario");
+
+  if (!usuario) {
+    mostrarMensagem("Usuário não encontrado.", "erro");
+    return;
+  }
+
+  const nome = String(dados.get("nome") || "").trim();
+  const novoEmail = String(dados.get("email") || "").trim().toLowerCase();
+  const tipo = String(dados.get("tipo") || "");
+  const cursoId = tipo === TIPOS_USUARIO.ALUNO ? String(dados.get("cursoId") || "") : "";
+
+  if (!nome || !novoEmail) {
+    mostrarMensagem("Informe nome e e-mail.", "alerta");
+    return;
+  }
+  if (tipo === TIPOS_USUARIO.ALUNO && !cursoId) {
+    mostrarMensagem("Selecione o curso do aluno.", "alerta");
+    return;
+  }
+
+  botao.disabled = true;
+  botao.textContent = "Salvando...";
+
+  try {
+    const alteracoes = {
+      nome,
+      tipo,
+      matricula: String(dados.get("matricula") || "").trim(),
+      cursoId,
+      ativo: String(dados.get("ativo")) === "true",
+      atualizadoEm: serverTimestamp(),
+      atualizadoPor: usuarioAtual.uid
+    };
+
+    if (novoEmail !== String(usuario.email || "").toLowerCase()) {
+      alteracoes.emailPendente = novoEmail;
+    } else {
+      alteracoes.emailPendente = "";
+    }
+
+    await updateDoc(doc(db, COLECOES.usuarios, usuarioId), alteracoes);
+    fecharModalEditarUsuario();
+
+    if (alteracoes.emailPendente) {
+      mostrarMensagem("Dados atualizados. O novo e-mail ficará pendente até o usuário confirmá-lo em Meu perfil.", "alerta");
+    } else {
+      mostrarMensagem("Usuário atualizado com sucesso.");
+    }
+
+    if (usuarioId === usuarioAtual.uid) {
+      perfilAtual = { ...perfilAtual, ...alteracoes };
+      $("#usuario-nome").textContent = nome;
+      $("#perfil-label").textContent = textoPerfil(tipo);
+    }
+
+    await renderUsuarios();
+  } catch (erro) {
+    console.error(erro);
+    mostrarMensagem("Não foi possível atualizar o usuário.", "erro");
+  } finally {
+    botao.disabled = false;
+    botao.textContent = "Salvar alterações";
+  }
+}
+
+async function renderMeuPerfil() {
+  definirTitulo("Meu perfil", "Atualize seu nome e seus dados de acesso.");
+  mostrarCarregando(conteudo());
+  await carregarBaseAcademica();
+  perfilAtual = await carregarPerfil(usuarioAtual.uid);
+
+  const emailAtual = auth.currentUser?.email || perfilAtual.email || "";
+  const emailSugerido = perfilAtual.emailPendente || emailAtual;
+
+  conteudo().innerHTML = `
+    <section class="grid-cards grid-cards-pequeno">
+      <div class="card"><strong>👤</strong><span>${protegerTexto(textoPerfil(perfilAtual.tipo))}</span><p>Seu perfil de acesso no sistema.</p></div>
+      <div class="card"><strong>✉</strong><span>${protegerTexto(emailAtual)}</span><p>E-mail usado para entrar.</p></div>
+      <div class="card"><strong>✓</strong><span>${perfilAtual.ativo === false ? "Inativo" : "Ativo"}</span><p>Status do seu cadastro.</p></div>
+    </section>
+
+    ${perfilAtual.emailPendente ? `
+      <section class="bloco aviso aviso-pendente-email">
+        <strong>Alteração de e-mail pendente</strong>
+        <p>A coordenação indicou o novo e-mail <strong>${protegerTexto(perfilAtual.emailPendente)}</strong>. Para concluir, confirme abaixo usando sua senha atual.</p>
+      </section>
+    ` : ""}
+
+    <section class="bloco perfil-bloco">
+      <div class="bloco-topo">
+        <div>
+          <h2>Dados pessoais</h2>
+          <p>Você pode alterar seu nome e e-mail. Perfil, curso, matrícula e status são administrados pela coordenação.</p>
+        </div>
+      </div>
+
+      <form id="form-meu-perfil" class="form-grid">
+        <div class="campo-largo">
+          <label>Nome completo</label>
+          <input name="nome" required value="${protegerTexto(perfilAtual.nome || "")}" />
+        </div>
+
+        <div class="campo-largo">
+          <label>E-mail de acesso</label>
+          <input name="email" type="email" required value="${protegerTexto(emailSugerido)}" />
+          <small class="texto-ajuda">Ao alterar o e-mail, ele também será atualizado no Firebase Authentication e passará a ser usado no próximo login.</small>
+        </div>
+
+        <div id="grupo-senha-confirmar-email" class="campo-largo" ${emailSugerido === emailAtual ? "hidden" : ""}>
+          <label for="senha-confirmar-email">Senha atual para confirmar a troca do e-mail</label>
+          <div class="campo-senha">
+            <input id="senha-confirmar-email" name="senhaAtual" type="password" autocomplete="current-password" placeholder="Informe sua senha atual" />
+            <button class="botao-olho" type="button" data-toggle-senha="senha-confirmar-email" aria-label="Mostrar senha">👁</button>
+          </div>
+        </div>
+
+        <div>
+          <label>Perfil</label>
+          <input value="${protegerTexto(textoPerfil(perfilAtual.tipo))}" disabled />
+        </div>
+        <div>
+          <label>Matrícula</label>
+          <input value="${protegerTexto(perfilAtual.matricula || "Não informada")}" disabled />
+        </div>
+        <div>
+          <label>Curso</label>
+          <input value="${protegerTexto(perfilAtual.cursoId ? nomeCurso(perfilAtual.cursoId) : "Não se aplica")}" disabled />
+        </div>
+        <div>
+          <label>Status</label>
+          <input value="${perfilAtual.ativo === false ? "Inativo" : "Ativo"}" disabled />
+        </div>
+
+        <div class="acoes campo-largo">
+          <button id="botao-salvar-meu-perfil" class="botao botao-primario" type="submit">Salvar meu perfil</button>
+        </div>
+      </form>
+    </section>
+  `;
+
+  configurarBotoesSenha(conteudo());
+
+  const campoEmail = $('#form-meu-perfil input[name="email"]');
+  const grupoSenha = $("#grupo-senha-confirmar-email");
+  campoEmail.addEventListener("input", () => {
+    const mudou = campoEmail.value.trim().toLowerCase() !== String(emailAtual).toLowerCase();
+    grupoSenha.hidden = !mudou;
+    const senha = $("#senha-confirmar-email");
+    senha.required = mudou;
+  });
+  campoEmail.dispatchEvent(new Event("input"));
+
+  $("#form-meu-perfil").addEventListener("submit", salvarMeuPerfil);
+}
+
+async function salvarMeuPerfil(evento) {
+  evento.preventDefault();
+  const dados = new FormData(evento.target);
+  const nome = String(dados.get("nome") || "").trim();
+  const novoEmail = String(dados.get("email") || "").trim().toLowerCase();
+  const emailAtual = String(auth.currentUser?.email || perfilAtual.email || "").toLowerCase();
+  const senhaAtual = String(dados.get("senhaAtual") || "");
+  const botao = $("#botao-salvar-meu-perfil");
+
+  if (!nome || !novoEmail) {
+    mostrarMensagem("Informe nome e e-mail.", "alerta");
+    return;
+  }
+
+  botao.disabled = true;
+  botao.textContent = "Salvando...";
+
+  try {
+    if (novoEmail !== emailAtual) {
+      if (!senhaAtual) {
+        mostrarMensagem("Informe sua senha atual para alterar o e-mail.", "alerta");
+        return;
+      }
+      const credencial = EmailAuthProvider.credential(emailAtual, senhaAtual);
+      await reauthenticateWithCredential(auth.currentUser, credencial);
+      await updateEmail(auth.currentUser, novoEmail);
+    }
+
+    await updateDoc(doc(db, COLECOES.usuarios, usuarioAtual.uid), {
+      nome,
+      email: novoEmail,
+      emailPendente: "",
+      atualizadoEm: serverTimestamp(),
+      atualizadoPor: usuarioAtual.uid
+    });
+
+    perfilAtual = {
+      ...perfilAtual,
+      nome,
+      email: novoEmail,
+      emailPendente: ""
+    };
+    const indice = cache.usuarios.findIndex((item) => item.id === usuarioAtual.uid);
+    if (indice >= 0) cache.usuarios[indice] = { ...cache.usuarios[indice], ...perfilAtual };
+    $("#usuario-nome").textContent = nome;
+    mostrarMensagem("Perfil atualizado com sucesso.");
+    await renderMeuPerfil();
+  } catch (erro) {
+    console.error(erro);
+    const mensagens = {
+      "auth/invalid-credential": "A senha atual não confere.",
+      "auth/wrong-password": "A senha atual não confere.",
+      "auth/email-already-in-use": "Este e-mail já está sendo usado por outra conta.",
+      "auth/invalid-email": "Informe um e-mail válido.",
+      "auth/requires-recent-login": "Por segurança, saia, entre novamente e tente alterar o e-mail.",
+      "auth/too-many-requests": "Muitas tentativas. Aguarde alguns minutos e tente novamente."
+    };
+    mostrarMensagem(mensagens[erro.code] || "Não foi possível atualizar o perfil.", "erro");
+  } finally {
+    botao.disabled = false;
+    botao.textContent = "Salvar meu perfil";
+  }
+}
+
 async function renderUsuarios() {
   definirTitulo("Usuários", "Cadastro de coordenadores, professores e alunos.");
   mostrarCarregando(conteudo());
@@ -949,6 +1285,7 @@ async function renderUsuarios() {
               <th>Curso</th>
               <th>Matrícula</th>
               <th>Status</th>
+              <th>Ações</th>
             </tr>
           </thead>
           <tbody id="tabela-usuarios-corpo"></tbody>
@@ -1000,7 +1337,7 @@ async function renderUsuarios() {
     sessionStorage.setItem("filtroUsuariosStatus", status);
 
     const filtrados = cache.usuarios.filter((usuario) => {
-      const textoBusca = [usuario.nome, usuario.email, usuario.matricula, nomeCurso(usuario.cursoId)]
+      const textoBusca = [usuario.nome, usuario.email, usuario.emailPendente, usuario.matricula, nomeCurso(usuario.cursoId)]
         .join(" ")
         .toLowerCase();
       const combinaBusca = !busca || textoBusca.includes(busca);
@@ -1021,7 +1358,7 @@ async function renderUsuarios() {
     if (usuariosFiltrados.length === 0) {
       corpo.innerHTML = `
         <tr>
-          <td colspan="7">
+          <td colspan="8">
             <div class="estado-vazio estado-vazio-tabela">
               <strong>Nenhum usuário encontrado.</strong>
               <p>Tente mudar o texto da pesquisa, o perfil ou o status.</p>
@@ -1042,11 +1379,12 @@ async function renderUsuarios() {
       <tr>
         <td class="coluna-numero">${indice + 1}</td>
         <td>${protegerTexto(usuario.nome)}</td>
-        <td>${protegerTexto(usuario.email)}</td>
+        <td>${protegerTexto(usuario.email)}${usuario.emailPendente ? `<span class="texto-suave texto-pendente-email">Novo e-mail pendente: ${protegerTexto(usuario.emailPendente)}</span>` : ""}</td>
         <td><span class="badge badge-info">${protegerTexto(textoPerfil(usuario.tipo))}</span></td>
         <td>${usuario.cursoId ? protegerTexto(nomeCurso(usuario.cursoId)) : "-"}</td>
         <td>${usuario.matricula ? protegerTexto(usuario.matricula) : "-"}</td>
         <td><span class="badge ${usuario.ativo === false ? "badge-muted" : "badge-success"}">${usuario.ativo === false ? "Inativo" : "Ativo"}</span></td>
+        <td><button type="button" class="botao botao-secundario botao-pequeno" data-editar-usuario="${protegerTexto(usuario.id)}">Editar</button></td>
       </tr>
     `).join("");
 
@@ -1054,7 +1392,7 @@ async function renderUsuarios() {
       <tr class="linha-total">
         <td></td>
         <td><strong>Total</strong></td>
-        <td colspan="5">
+        <td colspan="6">
           <strong>${usuariosFiltrados.length} usuário(s) exibido(s)</strong>
           <span class="detalhe-total">Coordenadores: ${totaisFiltrados.coordenadores} · Professores: ${totaisFiltrados.professores} · Alunos: ${totaisFiltrados.alunos}</span>
         </td>
@@ -1068,6 +1406,11 @@ async function renderUsuarios() {
   $("#filtro-status-usuarios").addEventListener("change", atualizarTabelaUsuarios);
   atualizarCampoCurso();
   atualizarTabelaUsuarios();
+
+  $("#tabela-usuarios-corpo").addEventListener("click", (evento) => {
+    const botao = evento.target.closest("[data-editar-usuario]");
+    if (botao) abrirModalEditarUsuario(botao.dataset.editarUsuario);
+  });
 
   $("#form-usuario").addEventListener("submit", async (evento) => {
     evento.preventDefault();
@@ -2367,6 +2710,7 @@ async function renderAlunoProgresso() {
 }
 
 function configurarEventosGlobais() {
+  $("#botao-meu-perfil")?.addEventListener("click", () => navegar("meu-perfil"));
   $("#botao-alterar-senha")?.addEventListener("click", abrirModalAlterarSenha);
 
   $("#botao-sair").addEventListener("click", async () => {

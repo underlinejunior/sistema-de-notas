@@ -32,10 +32,35 @@
           <p id="subtitulo-pagina">Carregando suas informações...</p>
         </div>
         <div class="usuario-logado">
-          <span id="usuario-nome" class="usuario-nome"><i class="fa-regular fa-circle-user" aria-hidden="true"></i><span></span></span>
-          <button id="botao-meu-perfil" class="botao botao-neutro" type="button"><i class="fa-regular fa-id-card" aria-hidden="true"></i><span>Meu perfil</span></button>
-          <button id="botao-alterar-senha" class="botao botao-secundario" type="button"><i class="fa-solid fa-key" aria-hidden="true"></i><span>Alterar senha</span></button>
-          <button id="botao-sair" class="botao botao-secundario" type="button"><i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i><span>Sair</span></button>
+          <div id="menu-usuario" class="menu-usuario">
+            <button
+              id="botao-menu-usuario"
+              class="menu-usuario-gatilho"
+              type="button"
+              aria-haspopup="menu"
+              aria-expanded="false"
+              aria-controls="opcoes-menu-usuario"
+            >
+              <span id="usuario-nome" class="usuario-nome"><i class="fa-regular fa-circle-user" aria-hidden="true"></i><span></span></span>
+              <i class="fa-solid fa-chevron-down menu-usuario-seta" aria-hidden="true"></i>
+            </button>
+
+            <div id="opcoes-menu-usuario" class="menu-usuario-opcoes" role="menu" hidden>
+              <button id="botao-meu-perfil" class="menu-usuario-item" type="button" role="menuitem">
+                <i class="fa-regular fa-id-card" aria-hidden="true"></i>
+                <span>Meu perfil</span>
+              </button>
+              <button id="botao-alterar-senha" class="menu-usuario-item" type="button" role="menuitem">
+                <i class="fa-solid fa-key" aria-hidden="true"></i>
+                <span>Alterar senha</span>
+              </button>
+              <div class="menu-usuario-separador" aria-hidden="true"></div>
+              <button id="botao-sair" class="menu-usuario-item menu-usuario-item-perigo" type="button" role="menuitem">
+                <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
+                <span>Sair</span>
+              </button>
+            </div>
+          </div>
         </div>
       </header>
 

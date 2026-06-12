@@ -2398,7 +2398,9 @@ async function renderFrequenciaCoordenador() {
     ? ordenarAulas(cache.aulas.filter((aula) => aula.ofertaId === ofertaSelecionadaId))
     : [];
   const matriculasTodas = ofertaSelecionadaId ? await buscarPorCampo(COLECOES.matriculas, "ofertaId", "==", ofertaSelecionadaId) : [];
-  const matriculas = matriculasTodas.filter((matricula) => !matriculaCancelada(matricula));
+  const matriculas = ordenarMatriculasPorAluno(
+    matriculasTodas.filter((matricula) => !matriculaCancelada(matricula))
+  );
   const frequencias = ofertaSelecionadaId ? await buscarPorCampo(COLECOES.frequencias, "ofertaId", "==", ofertaSelecionadaId) : [];
   const minimo = minimoFrequenciaOferta(ofertaSelecionada);
 
@@ -2543,7 +2545,9 @@ async function renderProfessorFrequencia() {
   let frequenciasOferta = [];
   if (ofertaSelecionadaId) {
     matriculas = await buscarPorCampo(COLECOES.matriculas, "ofertaId", "==", ofertaSelecionadaId);
-    matriculas = matriculas.filter((matricula) => !matriculaCancelada(matricula));
+    matriculas = ordenarMatriculasPorAluno(
+      matriculas.filter((matricula) => !matriculaCancelada(matricula))
+    );
     frequenciasOferta = await buscarPorCampo(COLECOES.frequencias, "ofertaId", "==", ofertaSelecionadaId);
   }
   const frequenciasDaOferta = frequenciasOferta.filter((frequencia) => frequencia.ofertaId === ofertaSelecionadaId);
@@ -2837,16 +2841,70 @@ async function renderAlunoProgresso() {
   `;
 }
 
-function configurarEventosGlobais() {
-  $("#botao-meu-perfil")?.addEventListener("click", () => navegar("meu-perfil"));
-  $("#botao-alterar-senha")?.addEventListener("click", abrirModalAlterarSenha);
+function fecharMenuUsuario() {
+  const menu = $("#menu-usuario");
+  const gatilho = $("#botao-menu-usuario");
+  const opcoes = $("#opcoes-menu-usuario");
+  if (!menu || !gatilho || !opcoes) return;
 
-  $("#botao-sair").addEventListener("click", async () => {
+  menu.classList.remove("aberto");
+  gatilho.setAttribute("aria-expanded", "false");
+  opcoes.hidden = true;
+}
+
+function alternarMenuUsuario() {
+  const menu = $("#menu-usuario");
+  const gatilho = $("#botao-menu-usuario");
+  const opcoes = $("#opcoes-menu-usuario");
+  if (!menu || !gatilho || !opcoes) return;
+
+  const abrir = opcoes.hidden;
+  menu.classList.toggle("aberto", abrir);
+  gatilho.setAttribute("aria-expanded", String(abrir));
+  opcoes.hidden = !abrir;
+
+  if (abrir) {
+    window.requestAnimationFrame(() => opcoes.querySelector("button")?.focus());
+  }
+}
+
+function configurarEventosGlobais() {
+  const menuUsuario = $("#menu-usuario");
+  const gatilhoMenuUsuario = $("#botao-menu-usuario");
+
+  gatilhoMenuUsuario?.addEventListener("click", (evento) => {
+    evento.stopPropagation();
+    alternarMenuUsuario();
+  });
+
+  menuUsuario?.addEventListener("click", (evento) => evento.stopPropagation());
+
+  $("#botao-meu-perfil")?.addEventListener("click", () => {
+    fecharMenuUsuario();
+    navegar("meu-perfil");
+  });
+
+  $("#botao-alterar-senha")?.addEventListener("click", () => {
+    fecharMenuUsuario();
+    abrirModalAlterarSenha();
+  });
+
+  $("#botao-sair")?.addEventListener("click", async () => {
+    fecharMenuUsuario();
     await signOut(auth);
     window.location.href = "index.html";
   });
 
+  document.addEventListener("click", fecharMenuUsuario);
+  document.addEventListener("keydown", (evento) => {
+    if (evento.key === "Escape") {
+      fecharMenuUsuario();
+      gatilhoMenuUsuario?.focus();
+    }
+  });
+
   $("#botao-menu-mobile").addEventListener("click", () => {
+    fecharMenuUsuario();
     $("#sidebar").classList.toggle("aberta");
   });
 }

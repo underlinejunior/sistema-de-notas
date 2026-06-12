@@ -2309,3 +2309,198 @@ td select {
     padding-bottom: 22px !important;
   }
 }
+
+
+/* =========================================================
+   MENU RECOLHÍVEL DO USUÁRIO
+   Substitui os botões separados de perfil, senha e saída.
+   ========================================================= */
+.usuario-logado {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.menu-usuario {
+  position: relative;
+}
+
+.menu-usuario-gatilho {
+  min-height: 48px;
+  max-width: min(360px, 38vw);
+  border: 1px solid transparent;
+  border-radius: 15px;
+  padding: 10px 14px;
+  background: transparent;
+  color: var(--cor-texto);
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  cursor: pointer;
+  font: inherit;
+  transition: background 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.menu-usuario-gatilho:hover,
+.menu-usuario-gatilho:focus-visible,
+.menu-usuario.aberto .menu-usuario-gatilho {
+  background: #ffffff;
+  border-color: var(--cor-borda);
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.09);
+  outline: none;
+}
+
+.menu-usuario-gatilho .usuario-nome {
+  min-width: 0;
+}
+
+.menu-usuario-gatilho .usuario-nome > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.menu-usuario-seta {
+  color: var(--cor-texto-suave);
+  font-size: 0.78rem;
+  transition: transform 0.18s ease;
+}
+
+.menu-usuario.aberto .menu-usuario-seta {
+  transform: rotate(180deg);
+}
+
+.menu-usuario-opcoes {
+  position: absolute;
+  z-index: 80;
+  top: calc(100% + 9px);
+  right: 0;
+  width: 224px;
+  padding: 8px;
+  border: 1px solid var(--cor-borda);
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 20px 48px rgba(15, 23, 42, 0.16);
+  transform-origin: top right;
+  animation: abrir-menu-usuario 0.16s ease-out;
+}
+
+.menu-usuario-opcoes[hidden] {
+  display: none !important;
+}
+
+.menu-usuario-item {
+  width: 100%;
+  border: 0;
+  border-radius: 11px;
+  padding: 11px 12px;
+  background: transparent;
+  color: var(--cor-texto);
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  transition: background 0.16s ease, color 0.16s ease;
+}
+
+.menu-usuario-item i {
+  width: 20px;
+  color: var(--cor-primaria);
+  text-align: center;
+}
+
+.menu-usuario-item:hover,
+.menu-usuario-item:focus-visible {
+  background: #eef3ff;
+  color: var(--cor-primaria-escura);
+  outline: none;
+}
+
+.menu-usuario-separador {
+  height: 1px;
+  margin: 6px 4px;
+  background: var(--cor-borda);
+}
+
+.menu-usuario-item-perigo {
+  color: var(--cor-perigo);
+}
+
+.menu-usuario-item-perigo i {
+  color: var(--cor-perigo);
+}
+
+.menu-usuario-item-perigo:hover,
+.menu-usuario-item-perigo:focus-visible {
+  background: #fef2f2;
+  color: var(--cor-perigo);
+}
+
+@keyframes abrir-menu-usuario {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 900px) {
+  .usuario-logado {
+    display: block !important;
+    width: auto !important;
+    margin-left: auto;
+  }
+
+  .menu-usuario-gatilho {
+    max-width: min(300px, 48vw);
+  }
+}
+
+@media (max-width: 640px) {
+  .topbar {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+  }
+
+  .usuario-logado {
+    width: auto !important;
+    grid-column: auto !important;
+  }
+
+  .menu-usuario-gatilho {
+    width: 46px;
+    min-width: 46px;
+    height: 46px;
+    padding: 0;
+    justify-content: center;
+    border-color: var(--cor-borda);
+    background: #ffffff;
+  }
+
+  .menu-usuario-gatilho .usuario-nome > span,
+  .menu-usuario-seta {
+    display: none;
+  }
+
+  .menu-usuario-gatilho .usuario-nome {
+    gap: 0;
+  }
+
+  .menu-usuario-gatilho .usuario-nome i {
+    font-size: 1.25rem;
+  }
+
+  .menu-usuario-opcoes {
+    position: fixed;
+    top: 76px;
+    right: 14px;
+    width: min(260px, calc(100vw - 28px));
+  }
+}

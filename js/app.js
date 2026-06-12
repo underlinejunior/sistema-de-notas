@@ -2250,7 +2250,9 @@ async function renderNotas(coordenador = false) {
       notas = await buscarPorCampo(COLECOES.notas, "ofertaId", "==", ofertaSelecionadaId);
     }
   }
-  matriculas = matriculas.filter((matricula) => !matriculaCancelada(matricula));
+  matriculas = ordenarMatriculasPorAluno(
+    matriculas.filter((matricula) => !matriculaCancelada(matricula))
+  );
   const notaPorMatricula = new Map(notas.map((nota) => [nota.matriculaId || nota.id, nota]));
 
   const linhas = matriculas.map((matricula) => {

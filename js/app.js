@@ -1320,10 +1320,13 @@ async function salvarMeuPerfil(evento) {
       "auth/email-already-in-use": "Este e-mail já está sendo usado por outra conta.",
       "auth/invalid-email": "Informe um e-mail válido.",
       "auth/operation-not-allowed": "A alteração de e-mail está desativada no Firebase Authentication.",
+      "auth/network-request-failed": "Falha de conexão com o Firebase. Verifique a internet e tente novamente.",
       "auth/requires-recent-login": "Por segurança, saia, entre novamente e tente alterar o e-mail.",
-      "auth/too-many-requests": "Muitas tentativas. Aguarde alguns minutos e tente novamente."
+      "auth/too-many-requests": "Muitas tentativas. Aguarde alguns minutos e tente novamente.",
+      "permission-denied": "O Firebase bloqueou a gravação do perfil (permission-denied). Publique o arquivo firestore.rules no Firestore."
     };
-    mostrarMensagem(mensagens[erro.code] || "Não foi possível atualizar o perfil.", "erro");
+    const codigoErro = erro.code ? ` Código: ${erro.code}.` : "";
+    mostrarMensagem(mensagens[erro.code] || `Não foi possível atualizar o perfil.${codigoErro}`, "erro");
   } finally {
     botao.disabled = false;
     botao.textContent = "Salvar meu perfil";

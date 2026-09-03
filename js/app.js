@@ -7,7 +7,7 @@ import {
   EmailAuthProvider,
   reauthenticateWithCredential,
   updatePassword,
-  updateEmail
+  verifyBeforeUpdateEmail
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 import {
   collection,
@@ -581,6 +581,25 @@ async function carregarPerfil(uid) {
   const perfilSnap = await getDoc(doc(db, COLECOES.usuarios, uid));
   if (!perfilSnap.exists()) return null;
   return { id: perfilSnap.id, ...perfilSnap.data() };
+}
+
+async function sincronizarEmailVerificado(usuario, perfil) {
+  const emailAutenticacao = String(usuario?.email || "").trim().toLowerCase();
+  const emailPendente = String(perfil?.emailPendente || "").trim().toLowerCase();
+
+  if (!emailAutenticacao || !emailPendente || emailAutenticacao !== emailPendente) {
+    return perfil;
+  }
+
+  const alteracoes = {
+    email: emailAutenticacao,
+    emailPendente: "",
+    atualizadoEm: serverTimestamp(),
+    atualizadoPor: usuario.uid
+  };
+
+  await updateDoc(doc(db, COLECOES.usuarios, usuario.uid), alteracoes);
+  return { ...perfil, ...alteracoes };
 }
 
 async function carregarBaseAcademica() {
@@ -1191,7 +1210,7 @@ async function renderMeuPerfil() {
         <div class="campo-largo">
           <label>E-mail de acesso</label>
           <input name="email" type="email" required value="${protegerTexto(emailSugerido)}" />
-          <small class="texto-ajuda">Ao alterar o e-mail, ele passará a ser usado no próximo acesso ao sistema.</small>
+          <small class="texto-ajuda">Ao alterar o e-mail, enviaremos um link de confirmação ao novo endereço. Ele passará a ser usado no acesso somente após a confirmação.</small>
         </div>
 
         <div id="grupo-senha-confirmar-email" class="campo-largo" ${emailSugerido === emailAtual ? "hidden" : ""}>
@@ -1266,13 +1285,13 @@ async function salvarMeuPerfil(evento) {
       }
       const credencial = EmailAuthProvider.credential(emailAtual, senhaAtual);
       await reauthenticateWithCredential(auth.currentUser, credencial);
-      await updateEmail(auth.currentUser, novoEmail);
+      await verifyBeforeUpdateEmail(auth.currentUser, novoEmail);
     }
 
     await updateDoc(doc(db, COLECOES.usuarios, usuarioAtual.uid), {
       nome,
-      email: novoEmail,
-      emailPendente: "",
+      email: emailAtual,
+      emailPendente: novoEmail !== emailAtual ? novoEmail : "",
       atualizadoEm: serverTimestamp(),
       atualizadoPor: usuarioAtual.uid
     });
@@ -1280,13 +1299,18 @@ async function salvarMeuPerfil(evento) {
     perfilAtual = {
       ...perfilAtual,
       nome,
-      email: novoEmail,
-      emailPendente: ""
+      email: emailAtual,
+      emailPendente: novoEmail !== emailAtual ? novoEmail : ""
     };
     const indice = cache.usuarios.findIndex((item) => item.id === usuarioAtual.uid);
     if (indice >= 0) cache.usuarios[indice] = { ...cache.usuarios[indice], ...perfilAtual };
     atualizarNomeUsuario(nome);
-    mostrarMensagem("Perfil atualizado com sucesso.");
+    mostrarMensagem(
+      novoEmail !== emailAtual
+        ? "Enviamos um link de confirmação ao novo e-mail. Abra esse link para concluir a alteração."
+        : "Perfil atualizado com sucesso.",
+      novoEmail !== emailAtual ? "alerta" : "sucesso"
+    );
     await renderMeuPerfil();
   } catch (erro) {
     console.error(erro);
@@ -1295,6 +1319,7 @@ async function salvarMeuPerfil(evento) {
       "auth/wrong-password": "A senha atual não confere.",
       "auth/email-already-in-use": "Este e-mail já está sendo usado por outra conta.",
       "auth/invalid-email": "Informe um e-mail válido.",
+      "auth/operation-not-allowed": "A alteração de e-mail está desativada no Firebase Authentication.",
       "auth/requires-recent-login": "Por segurança, saia, entre novamente e tente alterar o e-mail.",
       "auth/too-many-requests": "Muitas tentativas. Aguarde alguns minutos e tente novamente."
     };
@@ -2919,6 +2944,14 @@ onAuthStateChanged(auth, async (usuario) => {
 
   usuarioAtual = usuario;
   perfilAtual = await carregarPerfil(usuario.uid);
+
+  if (perfilAtual) {
+    try {
+      perfilAtual = await sincronizarEmailVerificado(usuario, perfilAtual);
+    } catch (erro) {
+      console.error("Não foi possível sincronizar o e-mail verificado.", erro);
+    }
+  }
 
   if (!perfilAtual || perfilAtual.ativo === false) {
     await signOut(auth);
